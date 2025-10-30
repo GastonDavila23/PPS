@@ -1,0 +1,5 @@
+# Ignorar dependencias de Node (Frontend)
+frontend/node_modules/
+
+# Ignorar entorno virtual de Python (Backend)
+backend/venv/
