@@ -145,6 +145,8 @@ def get_asignaciones():
     filtro_turno = request.args.get('turno')
     filtro_estado = request.args.get('estado_asignacion')
 
+    filtro_nombre = request.args.get('nombre_escuela') 
+
     conn = get_db_connection()
     
     base_query = "FROM resultados_asignacion"
@@ -168,6 +170,11 @@ def get_asignaciones():
             where_clause += " AND Observaciones = 'Asignado (10-30 km)'"
         elif filtro_estado == 'no-asignadas':
             where_clause += " AND Observaciones LIKE 'No Asignada%'"
+
+    if filtro_nombre:
+        where_clause += " AND (origen_Nombre_Escuela LIKE ? OR destino_Nombre_Escuela LIKE ?)"
+        params.append(f"%{filtro_nombre}%")
+        params.append(f"%{filtro_nombre}%")
 
     try:
         total_items_query = f"SELECT COUNT(*) {base_query}{where_clause}"

@@ -9,6 +9,9 @@ import Row from 'react-bootstrap/Row';
 import Pagination from 'react-bootstrap/Pagination';
 import Spinner from 'react-bootstrap/Spinner';
 import Alert from 'react-bootstrap/Alert';
+import Card from 'react-bootstrap/Card';
+import InputGroup from 'react-bootstrap/InputGroup';
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import type { IAsignacionFlat } from './data/mockAsignaciones';
 import PanelAdmin from './components/PanelAdmin';
 import AppHeader from './components/Header';
@@ -28,32 +31,44 @@ const opcionesEstadoAsignacion = [
 function App() {
   const { isLoading: isAuthLoading, isAuthenticated, user } = useAuth0();
 
-  // --- Estados de la aplicación ---
   const [rol, setRol] = useState<RolUsuario | null>(null);
   const [asignaciones, setAsignaciones] = useState<IAsignacionFlat[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
-  
-  // --- Estados de Paginación ---
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 12;
 
-  // --- NUEVOS ESTADOS DE FILTROS MÚLTIPLES ---
   const [filtroDepto, setFiltroDepto] = useState<string>('todos');
   const [filtroTurno, setFiltroTurno] = useState<string>('todos');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
 
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filtroNombreDebounced, setFiltroNombreDebounced] = useState<string>('');
+  const [isSearching, setIsSearching] = useState(false);
+
   const [allDepartamentos, setAllDepartamentos] = useState<string[]>([]);
   const [allTurnos, setAllTurnos] = useState<string[]>([]);
-  
-  // --- Estados para Modales ---
+
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 
-  // Hook de Efecto para cargar datos
+  useEffect(() => {
+    setIsSearching(true);
+    const timerId = setTimeout(() => {
+      setFiltroNombreDebounced(searchTerm);
+      setCurrentPage(1);
+      setIsSearching(false);
+    }, 500);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [searchTerm]);
+
   useEffect(() => {
     const getDatosYRol = async () => {
       if (!isAuthenticated || !user?.email) {
@@ -78,10 +93,10 @@ function App() {
             params: { 
               page: currentPage, 
               limit: ITEMS_PER_PAGE,
-              // Envío de filtros independientes
               departamento: filtroDepto,
               turno: filtroTurno,
-              estado_asignacion: filtroEstado
+              estado_asignacion: filtroEstado,
+              nombre_escuela: filtroNombreDebounced
             }
           });
           setAsignaciones(response.data.asignaciones);
@@ -100,12 +115,11 @@ function App() {
     };
     
     getDatosYRol();
-  }, [isAuthenticated, user, currentPage, filtroDepto, filtroTurno, filtroEstado]);
-  // Listas de opciones para los menús desplegables
+  }, [isAuthenticated, user, currentPage, filtroDepto, filtroTurno, filtroEstado, filtroNombreDebounced]);
+  
   const opcionesDepartamento = useMemo(() => [...new Set(allDepartamentos.filter(Boolean))], [allDepartamentos]);
   const opcionesTurno = useMemo(() => [...new Set(allTurnos.filter(Boolean))], [allTurnos]);
 
-  // Manejador genérico para cambiar filtros y resetear la paginación
   const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>, value: string) => {
     setter(value);
     setCurrentPage(1);
@@ -122,54 +136,96 @@ function App() {
     if (!isAuthenticated) {
       return <Alert variant="info" className="text-center mt-4"><h2>Por favor, iniciá sesión para ver el sistema.</h2></Alert>;
     }
-    if (isDataLoading) {
+    if (isDataLoading && asignaciones.length === 0) { 
       return <div className="text-center mt-5"><Spinner animation="border" /><p className="mt-2">Cargando asignaciones...</p></div>;
     }
     
     switch (rol) {
       case 'admin':
       case 'profesor':
-        if (dataError) return <Alert variant="danger" className="text-center mt-4">{dataError}</Alert>;
+        if (dataError && asignaciones.length === 0) return <Alert variant="danger" className="text-center mt-4">{dataError}</Alert>;
         return (
           <>
             <div className="text-center mb-4">
               <h2>Panel de Asignaciones</h2>
               <p className="lead">Visualiza las asignaciones de profesores entre escuelas y filtra los resultados.</p>
             </div>
-            <Row className="mb-3 bg-light p-3 rounded align-items-end g-3">
-              <Col md={4}>
-                <Form.Group controlId="filtroDepto">
-                  <Form.Label><strong>Departamento de Origen</strong></Form.Label>
-                  <Form.Select value={filtroDepto} onChange={(e) => handleFilterChange(setFiltroDepto, e.target.value)}>
-                    <option value="todos">Todos</option>
-                    {opcionesDepartamento.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              
-              <Col md={3}>
-                <Form.Group controlId="filtroTurno">
-                  <Form.Label><strong>Turno</strong></Form.Label>
-                  <Form.Select value={filtroTurno} onChange={(e) => handleFilterChange(setFiltroTurno, e.target.value)}>
-                    <option value="todos">Todos</option>
-                    {opcionesTurno.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              
-              <Col md={4}>
-                <Form.Group controlId="filtroEstado">
-                  <Form.Label><strong>Estado de Asignación</strong></Form.Label>
-                  <Form.Select value={filtroEstado} onChange={(e) => handleFilterChange(setFiltroEstado, e.target.value)}>
-                    <option value="todos">Todos</option>
-                    {opcionesEstadoAsignacion.map(opcion => (<option key={opcion.value} value={opcion.value}>{opcion.label}</option>))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
+
+            <Card className="mb-4">
+              <Card.Header as="h5">Filtros de Búsqueda</Card.Header>
+              <Card.Body>
+                <Form>
+                  <Row className="g-3 align-items-center">
+                    
+                    {/* --- Filtro Departamento --- */}
+                    <Col md={3}>
+                      <FloatingLabel controlId="floatingDepto" label="Departamento">
+                        <Form.Select 
+                          aria-label="Departamento de Origen"
+                          value={filtroDepto} 
+                          onChange={(e) => handleFilterChange(setFiltroDepto, e.target.value)}
+                        >
+                          <option value="todos">Todos los Departamentos</option>
+                          {opcionesDepartamento.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
+                        </Form.Select>
+                      </FloatingLabel>
+                    </Col>
+                    
+                    {/* --- Filtro Turno --- */}
+                    <Col md={2}>
+                      <FloatingLabel controlId="floatingTurno" label="Turno">
+                        <Form.Select 
+                          aria-label="Turno"
+                          value={filtroTurno} 
+                          onChange={(e) => handleFilterChange(setFiltroTurno, e.target.value)}
+                        >
+                          <option value="todos">Todos los Turnos</option>
+                          {opcionesTurno.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
+                        </Form.Select>
+                      </FloatingLabel>
+                    </Col>
+
+                    {/* --- Filtro Estado --- */}
+                    <Col md={3}>
+                      <FloatingLabel controlId="floatingEstado" label="Estado">
+                        <Form.Select 
+                          aria-label="Estado de Asignación"
+                          value={filtroEstado} 
+                          onChange={(e) => handleFilterChange(setFiltroEstado, e.target.value)}
+                        >
+                          <option value="todos">Todos los Estados</option>
+                          {opcionesEstadoAsignacion.map(opcion => (<option key={opcion.value} value={opcion.value}>{opcion.label}</option>))}
+                        </Form.Select>
+                      </FloatingLabel>
+                    </Col>
+                    
+                    {/* --- Filtro Nombre --- */}
+                    <Col md={4}>
+                      <InputGroup>
+                        <FloatingLabel controlId="floatingNombre" label="Buscar por Nombre de Escuela...">
+                          <Form.Control
+                            type="text"
+                            placeholder="Buscar por Nombre de Escuela..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </FloatingLabel>
+                        {isSearching && (
+                          <InputGroup.Text>
+                            <Spinner animation="border" size="sm" />
+                          </InputGroup.Text>
+                        )}
+                      </InputGroup>
+                    </Col>
+                  </Row>
+                </Form>
+              </Card.Body>
+            </Card>
             
-            <p className="text-muted">Mostrando {asignaciones.length} de {totalItems} resultados.</p>
-            <TablaAsignaciones asignaciones={asignaciones} />
+            <p className="text-muted">Mostrando {isDataLoading ? '...' : asignaciones.length} de {isDataLoading ? '...' : totalItems} resultados.</p>
+            {isDataLoading && <div className="text-center mt-3"><Spinner animation="border" size="sm" /></div>}
+            {!isDataLoading && asignaciones.length > 0 && <TablaAsignaciones asignaciones={asignaciones} />}
+            {!isDataLoading && asignaciones.length === 0 && <Alert variant="secondary">No se encontraron resultados para los filtros seleccionados.</Alert>}
           </>
         );
       case 'profesor-pendiente':
@@ -190,14 +246,14 @@ function App() {
         />
         <main>
           {renderizarContenidoPrincipal()}
-          {(rol === 'admin' || rol === 'profesor') && totalPages > 1 &&
+          {(rol === 'admin' || rol === 'profesor') && totalPages > 1 && !isDataLoading &&
             <div className="d-flex justify-content-center mt-4">
               <Pagination>
-                <Pagination.First onClick={() => handlePageChange(1)} disabled={currentPage === 1} />
-                <Pagination.Prev onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} />
+                <Pagination.First onClick={() => handlePageChange(1)} disabled={currentPage === 1 || isDataLoading} />
+                <Pagination.Prev onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1 || isDataLoading} />
                 <Pagination.Item active>{`Página ${currentPage} de ${totalPages}`}</Pagination.Item>
-                <Pagination.Next onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} />
-                <Pagination.Last onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages} />
+                <Pagination.Next onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages || isDataLoading} />
+                <Pagination.Last onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages || isDataLoading} />
               </Pagination>
             </div>
           }
