@@ -82,7 +82,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1); // Página actual
   const [totalPages, setTotalPages] = useState(0); // Total de páginas (viene de la API)
   const [totalItems, setTotalItems] = useState(0); // Total de resultados (viene de la API)
-  const ITEMS_PER_PAGE = 12; // Cuántos items mostrar por página
+  const ITEMS_PER_PAGE = 20; // Cuántos items mostrar por página
 
   // Estado de Filtros (Selects)
   const [filtroDepto, setFiltroDepto] = useState<string>('todos');
@@ -233,7 +233,10 @@ function App() {
     }
     // 2. No Autenticado
     if (!isAuthenticated) {
-      return <Alert variant="info" className="text-center mt-4"><h2>Por favor, iniciá sesión para ver el sistema.</h2></Alert>;
+      return <Alert variant="info" className="text-center mt-4">
+        <h2>Por favor, inicia sesión para ver las asignaciones.</h2>
+        <h3>Esta información es confidencial.</h3>
+        </Alert>;
     }
     // 3. Cargando Datos de API (y no hay datos "viejos" para mostrar)
     if (isDataLoading && asignaciones.length === 0) { 
