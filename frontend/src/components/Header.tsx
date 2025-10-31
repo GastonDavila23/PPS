@@ -6,7 +6,7 @@ import Nav from 'react-bootstrap/Nav';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import Image from 'react-bootstrap/Image';
 import logoDGE from '../assets/logo.png';
-import {Upload, Download, GearFill, PersonCircle, BoxArrowRight } from 'react-bootstrap-icons';
+import { Upload, Download, GearFill, PersonCircle, BoxArrowRight, BoxArrowInRight } from 'react-bootstrap-icons';
 
 interface Props {
   rol: 'admin' | 'profesor' | 'profesor-pendiente' | null;
@@ -16,7 +16,7 @@ interface Props {
 }
 
 function AppHeader({ rol, onShowAdminPanel, onShowUploadPanel, onShowDownloadPanel }: Props) {
-  const { user, logout } = useAuth0();
+  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
 
   return (
     <Navbar bg="light" expand="lg" className="mb-4 p-2" sticky="top" style={{ borderBottom: '1px solid #dee2e6' }}>
@@ -30,44 +30,54 @@ function AppHeader({ rol, onShowAdminPanel, onShowUploadPanel, onShowDownloadPan
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto align-items-center">
-            {rol === 'admin' && (
+            {isAuthenticated && user ? (
               <>
-                <Button variant="outline-primary" onClick={onShowUploadPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
-                  <Upload className="me-2" /> Cargar Planillas
-                </Button>
-                <Button variant="outline-success" onClick={onShowDownloadPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
-                  <Download className="me-2" /> Descargar Reporte
-                </Button>
-                <Button variant="outline-secondary" onClick={onShowAdminPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
-                  <GearFill className="me-2" /> Admin Roles
-                </Button>
-              </>
-            )}
-            {rol === 'profesor' && (
-              <Button variant="outline-success" onClick={onShowDownloadPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
-                <Download className="me-2" /> Descargar Reporte
-              </Button>
-            )}
+                {rol === 'admin' && (
+                  <>
+                    <Button variant="outline-primary" onClick={onShowUploadPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
+                      <Upload className="me-2" /> Cargar Planillas
+                    </Button>
+                    <Button variant="outline-success" onClick={onShowDownloadPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
+                      <Download className="me-2" /> Descargar Reporte
+                    </Button>
+                    <Button variant="outline-secondary" onClick={onShowAdminPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
+                      <GearFill className="me-2" /> Admin Roles
+                    </Button>
+                  </>
+                )}
+                {rol === 'profesor' && (
+                  <Button variant="outline-success" onClick={onShowDownloadPanel} className="me-2 mb-2 mb-lg-0 d-flex align-items-center">
+                    <Download className="me-2" /> Descargar Reporte
+                  </Button>
+                )}
 
-            {user && (
-              <NavDropdown 
-                title={
-                  <span className="d-flex align-items-center">
-                    <PersonCircle className="me-2" />
-                    {user.email}
-                  </span>
-                } 
-                id="basic-nav-dropdown" 
-                align="end"
+                <NavDropdown 
+                  title={
+                    <span className="d-flex align-items-center">
+                      <PersonCircle className="me-2" />
+                      {user.email}
+                    </span>
+                  } 
+                  id="basic-nav-dropdown" 
+                  align="end"
+                >
+                  <NavDropdown.ItemText className="text-muted small px-3">
+                    Rol: <span className="fw-bold">{rol || '...'}</span>
+                  </NavDropdown.ItemText>
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
+                    <BoxArrowRight className="me-2" /> Cerrar Sesión
+                  </NavDropdown.Item>
+                </NavDropdown>
+              </>
+            ) : (
+              <Button 
+                variant="primary" 
+                onClick={() => loginWithRedirect()}
+                className="d-flex align-items-center"
               >
-                <NavDropdown.ItemText className="text-muted small px-3">
-                  Rol: <span className="fw-bold">{rol || '...'}</span>
-                </NavDropdown.ItemText>
-                <NavDropdown.Divider />
-                <NavDropdown.Item onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
-                  <BoxArrowRight className="me-2" /> Cerrar Sesión
-                </NavDropdown.Item>
-              </NavDropdown>
+                <BoxArrowInRight className="me-2" /> Iniciar Sesión
+              </Button>
             )}
           </Nav>
         </Navbar.Collapse>
