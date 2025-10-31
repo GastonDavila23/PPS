@@ -16,8 +16,14 @@ import CargaPlanillasModal from './components/CargarPlanilla';
 import PanelDescargas from './components/PanelDescargas';
 import TablaAsignaciones from './components/TablaAsisgnaciones';
 
-type TipoFiltro = 'ninguno' | 'departamento' | 'turno' | 'observaciones';
 type RolUsuario = 'admin' | 'profesor' | 'profesor-pendiente';
+
+const opcionesEstadoAsignacion = [
+  { value: '0-5km', label: 'Asignado (0-5 km)' },
+  { value: '5-10km', label: 'Asignado (5-10 km)' },
+  { value: '10-30km', label: 'Asignado (10-30 km)' },
+  { value: 'no-asignadas', label: 'No Asignadas (Excepciones)' },
+];
 
 function App() {
   const { isLoading: isAuthLoading, isAuthenticated, user } = useAuth0();
@@ -28,19 +34,26 @@ function App() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   
-  // --- Estados de Paginación y Filtros ---
+  // --- Estados de Paginación ---
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
-  const ITEMS_PER_PAGE = 15;
-  const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('ninguno');
-  const [valorFiltro, setValorFiltro] = useState<string>('todos');
+  const ITEMS_PER_PAGE = 12;
 
+  // --- NUEVOS ESTADOS DE FILTROS MÚLTIPLES ---
+  const [filtroDepto, setFiltroDepto] = useState<string>('todos');
+  const [filtroTurno, setFiltroTurno] = useState<string>('todos');
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+
+  const [allDepartamentos, setAllDepartamentos] = useState<string[]>([]);
+  const [allTurnos, setAllTurnos] = useState<string[]>([]);
+  
   // --- Estados para Modales ---
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 
+  // Hook de Efecto para cargar datos
   useEffect(() => {
     const getDatosYRol = async () => {
       if (!isAuthenticated || !user?.email) {
@@ -54,22 +67,29 @@ function App() {
       setDataError(null);
 
       try {
+        // 1. Obtener Rol
         const rolResponse = await axios.get(`http://127.0.0.1:5000/api/usuarios/rol?email=${user.email}`);
         const userRole: RolUsuario = rolResponse.data.rol;
         setRol(userRole);
 
+        // 2. Si tiene permiso, obtener asignaciones con los filtros
         if (userRole === 'admin' || userRole === 'profesor') {
           const response = await axios.get("http://127.0.0.1:5000/api/asignaciones", {
             params: { 
               page: currentPage, 
               limit: ITEMS_PER_PAGE,
-              tipoFiltro: tipoFiltro,
-              valorFiltro: valorFiltro 
+              // Envío de filtros independientes
+              departamento: filtroDepto,
+              turno: filtroTurno,
+              estado_asignacion: filtroEstado
             }
           });
           setAsignaciones(response.data.asignaciones);
           setTotalItems(response.data.totalItems);
           setTotalPages(response.data.totalPages);
+          
+          setAllDepartamentos(response.data.allDepartamentos);
+          setAllTurnos(response.data.allTurnos);
         }
       } catch (error) {
         setDataError("No se pudo cargar la información. Es posible que no haya datos cargados en el sistema.");
@@ -80,50 +100,21 @@ function App() {
     };
     
     getDatosYRol();
-  }, [isAuthenticated, user, currentPage, tipoFiltro, valorFiltro]);
+  }, [isAuthenticated, user, currentPage, filtroDepto, filtroTurno, filtroEstado]);
+  // Listas de opciones para los menús desplegables
+  const opcionesDepartamento = useMemo(() => [...new Set(allDepartamentos.filter(Boolean))], [allDepartamentos]);
+  const opcionesTurno = useMemo(() => [...new Set(allTurnos.filter(Boolean))], [allTurnos]);
 
-  const opcionesDepartamento = useMemo(() => [...new Set(asignaciones.map(a => a.origen_Departamento).filter(Boolean))], [asignaciones]);
-  const opcionesTurno = useMemo(() => [...new Set(asignaciones.map(a => a.origen_Turno).filter(Boolean))], [asignaciones]);
-  const opcionesObservaciones = useMemo(() => [...new Set(asignaciones.map(a => a.Observaciones).filter(Boolean))], [asignaciones]);
-
-  const handleFilterTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTipoFiltro(e.target.value as TipoFiltro);
-    setValorFiltro('todos');
+  // Manejador genérico para cambiar filtros y resetear la paginación
+  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>, value: string) => {
+    setter(value);
     setCurrentPage(1);
-  };
-  
-  const handleFilterValueChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setValorFiltro(e.target.value);
-    setCurrentPage(1); 
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const renderizarFiltroDeValor = () => {
-    if (tipoFiltro === 'ninguno') return null;
-
-    let opciones: string[] = [];
-    let etiqueta = 'Seleccioná un valor';
-    switch (tipoFiltro) {
-      case 'departamento': opciones = opcionesDepartamento; etiqueta = 'Departamento de Origen'; break;
-      case 'turno': opciones = opcionesTurno; etiqueta = 'Turno'; break;
-      case 'observaciones': opciones = opcionesObservaciones; etiqueta = 'Observaciones'; break;
-    }
-    return (
-      <Col md={4}>
-        <Form.Group controlId="filtroDeValor">
-          <Form.Label><strong>{etiqueta}</strong></Form.Label>
-          <Form.Select value={valorFiltro} onChange={handleFilterValueChange}>
-            <option value="todos">Todos</option>
-            {opciones.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
-          </Form.Select>
-        </Form.Group>
-      </Col>
-    );
-  };
-  
   const renderizarContenidoPrincipal = () => {
     if (isAuthLoading) {
       return <div className="text-center mt-5"><Spinner animation="border" variant="primary" /></div>;
@@ -145,20 +136,38 @@ function App() {
               <h2>Panel de Asignaciones</h2>
               <p className="lead">Visualiza las asignaciones de profesores entre escuelas y filtra los resultados.</p>
             </div>
-            <Row className="mb-3 bg-light p-3 rounded align-items-end">
+            <Row className="mb-3 bg-light p-3 rounded align-items-end g-3">
               <Col md={4}>
-                <Form.Group controlId="tipoDeFiltro">
-                  <Form.Label><strong>Filtrar por</strong></Form.Label>
-                  <Form.Select value={tipoFiltro} onChange={handleFilterTypeChange}>
-                    <option value="ninguno">Sin filtro</option>
-                    <option value="departamento">Departamento de Origen</option>
-                    <option value="turno">Turno</option>
-                    <option value="observaciones">Observaciones</option>
+                <Form.Group controlId="filtroDepto">
+                  <Form.Label><strong>Departamento de Origen</strong></Form.Label>
+                  <Form.Select value={filtroDepto} onChange={(e) => handleFilterChange(setFiltroDepto, e.target.value)}>
+                    <option value="todos">Todos</option>
+                    {opcionesDepartamento.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
                   </Form.Select>
                 </Form.Group>
               </Col>
-              {renderizarFiltroDeValor()}
+              
+              <Col md={3}>
+                <Form.Group controlId="filtroTurno">
+                  <Form.Label><strong>Turno</strong></Form.Label>
+                  <Form.Select value={filtroTurno} onChange={(e) => handleFilterChange(setFiltroTurno, e.target.value)}>
+                    <option value="todos">Todos</option>
+                    {opcionesTurno.map(opcion => (<option key={opcion} value={opcion}>{opcion}</option>))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              
+              <Col md={4}>
+                <Form.Group controlId="filtroEstado">
+                  <Form.Label><strong>Estado de Asignación</strong></Form.Label>
+                  <Form.Select value={filtroEstado} onChange={(e) => handleFilterChange(setFiltroEstado, e.target.value)}>
+                    <option value="todos">Todos</option>
+                    {opcionesEstadoAsignacion.map(opcion => (<option key={opcion.value} value={opcion.value}>{opcion.label}</option>))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
             </Row>
+            
             <p className="text-muted">Mostrando {asignaciones.length} de {totalItems} resultados.</p>
             <TablaAsignaciones asignaciones={asignaciones} />
           </>
@@ -206,7 +215,10 @@ function App() {
       <Modal show={showDownloadModal} onHide={() => setShowDownloadModal(false)} size="lg">
         <Modal.Header closeButton><Modal.Title>Descargar Datos en Excel</Modal.Title></Modal.Header>
         <Modal.Body>
-          <PanelDescargas departamentos={opcionesDepartamento} turnos={opcionesTurno} observaciones={opcionesObservaciones} />
+          <PanelDescargas 
+            departamentos={opcionesDepartamento} 
+            turnos={opcionesTurno} 
+          />
         </Modal.Body>
       </Modal>
     </>

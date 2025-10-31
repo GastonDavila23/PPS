@@ -20,7 +20,8 @@ def get_db_connection():
 def recalcular_y_guardar_asignaciones():
     """
     Lee los datos de las escuelas, calcula las asignaciones basadas en la cercanía
-    y guarda los resultados en la base de datos.
+    y guarda los resultados en la base de datos, clasificándolos por rangos de distancia.
+    Lógica de Slots: Compara por Turno, no por División.
     """
     try:
         conn = get_db_connection()
@@ -40,19 +41,27 @@ def recalcular_y_guardar_asignaciones():
     destinos_disponibles = df.copy()
     lista_resultados = []
     
+    OBS_FALTA_DATOS = "No Asignada (Faltan Datos Geo)"
+    OBS_SIN_CANDIDATOS = "No Asignada (Sin Candidatos)"
+    OBS_MAYOR_30KM = "No Asignada (Candidatos > 30km)"
+    OBS_0_5KM = "Asignado (0-5 km)"
+    OBS_5_10KM = "Asignado (5-10 km)"
+    OBS_10_30KM = "Asignado (10-30 km)"
+
     for _, profesor_origen in df.iterrows():
         origen_info = profesor_origen.to_dict()
         
         if pd.isna(origen_info.get('Latitud')) or pd.isna(origen_info.get('Longitud')):
             resultado = {
                 "origen": origen_info, "destino": origen_info,
-                "Distancia_KM": 0.0, "Observaciones": 'Excepcion: no asignada por falta de datos'
+                "Distancia_KM": 0.0, "Observaciones": OBS_FALTA_DATOS
             }
             lista_resultados.append(resultado)
             continue
             
         candidatos = []
         for _, posible_destino in destinos_disponibles.iterrows():
+
             if (pd.notna(posible_destino.get('Latitud')) and pd.notna(posible_destino.get('Longitud')) and
                 origen_info.get('CUE') != posible_destino.get('CUE') and
                 origen_info.get('Turno') == posible_destino.get('Turno')):
@@ -61,32 +70,41 @@ def recalcular_y_guardar_asignaciones():
                     (origen_info['Latitud'], origen_info['Longitud']),
                     (posible_destino['Latitud'], posible_destino['Longitud'])
                 ).kilometers
-                candidatos.append({'destino_serie': posible_destino, 'distancia': dist})
+                candidatos.append({'destino_serie': posible_destino, 'distancia': dist, 'index': posible_destino.name})
         
         if not candidatos:
             resultado = {
                 "origen": origen_info, "destino": origen_info,
-                "Distancia_KM": 0.0, "Observaciones": 'Excepción: sin candidatos disponibles'
+                "Distancia_KM": 0.0, "Observaciones": OBS_SIN_CANDIDATOS
             }
             lista_resultados.append(resultado)
             continue
 
         mejor_opcion = sorted(candidatos, key=lambda x: x['distancia'])[0]
+        distancia_final = mejor_opcion['distancia']
         
-        if mejor_opcion['distancia'] <= 30:
-            destino_info = mejor_opcion['destino_serie'].to_dict()
-            resultado = {
-                "origen": origen_info, "destino": destino_info,
-                "Distancia_KM": mejor_opcion['distancia'], "Observaciones": 'Asignado a escuela cercana'
-            }
-            destinos_disponibles.drop(mejor_opcion['destino_serie'].name, inplace=True, errors='ignore')
+        if distancia_final < 5:
+            observacion = OBS_0_5KM
+        elif 5 <= distancia_final < 10:
+            observacion = OBS_5_10KM
+        elif 10 <= distancia_final <= 30:
+            observacion = OBS_10_30KM
         else:
             resultado = {
                 "origen": origen_info, "destino": origen_info,
-                "Distancia_KM": 0.0, "Observaciones": 'Excepción: sin escuelas a < 30km'
+                "Distancia_KM": 0.0, "Observaciones": OBS_MAYOR_30KM
             }
+            lista_resultados.append(resultado)
+            continue
+        
+        destino_info = mejor_opcion['destino_serie'].to_dict()
+        resultado = {
+            "origen": origen_info, "destino": destino_info,
+            "Distancia_KM": distancia_final, "Observaciones": observacion
+        }
+        destinos_disponibles.drop(mejor_opcion['index'], inplace=True, errors='ignore')
         lista_resultados.append(resultado)
-    
+
     datos_para_db = []
     for r in lista_resultados:
         fila = {
@@ -95,7 +113,8 @@ def recalcular_y_guardar_asignaciones():
             'origen_Nombre_Escuela': r['origen'].get('Nombre_Escuela'), 'origen_Division': r['origen'].get('Division'),
             'origen_Turno': r['origen'].get('Turno'), 'destino_Departamento': r['destino'].get('Departamento'),
             'destino_CUE': r['destino'].get('CUE'), 'destino_Numero_Escuela': r['destino'].get('Numero_Escuela'),
-            'destino_Numero_Anexo': r['destino'].get('Numero_Anexo'), 'destino_Nombre_Escuela': r['destino'].get('Nombre_Escuela'),
+            'destino_Numero_Anexo': r['destino'].get('Numero_Anexo'), 
+            'destino_Nombre_Escuela': r['destino'].get('Nombre_Escuela'),
             'destino_Division': r['destino'].get('Division'), 'destino_Turno': r['destino'].get('Turno'),
             'Distancia_KM': round(r.get('Distancia_KM', 0), 2), 'Observaciones': r.get('Observaciones')
         }
@@ -112,18 +131,19 @@ def recalcular_y_guardar_asignaciones():
         print(f"ERROR: No se pudieron guardar las asignaciones en la BD. {e}")
     finally:
         conn.close()
-
+        
 @app.route("/api/asignaciones", methods=['GET'])
 def get_asignaciones():
     """
-    Devuelve las asignaciones de forma paginada y con filtros aplicados desde el servidor.
+    Devuelve las asignaciones de forma paginada y con filtros MÚLTIPLES aplicados.
     """
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 15, type=int)
     offset = (page - 1) * limit
     
-    tipo_filtro = request.args.get('tipoFiltro')
-    valor_filtro = request.args.get('valorFiltro')
+    filtro_depto = request.args.get('departamento')
+    filtro_turno = request.args.get('turno')
+    filtro_estado = request.args.get('estado_asignacion')
 
     conn = get_db_connection()
     
@@ -131,14 +151,23 @@ def get_asignaciones():
     where_clause = " WHERE 1=1"
     params = []
 
-    if tipo_filtro and valor_filtro and valor_filtro != 'todos':
-        if tipo_filtro == 'departamento':
-            where_clause += " AND origen_Departamento = ?"
-        elif tipo_filtro == 'turno':
-            where_clause += " AND origen_Turno = ?"
-        elif tipo_filtro == 'observaciones':
-            where_clause += " AND Observaciones = ?"
-        params.append(valor_filtro)
+    if filtro_depto and filtro_depto != 'todos':
+        where_clause += " AND origen_Departamento = ?"
+        params.append(filtro_depto)
+        
+    if filtro_turno and filtro_turno != 'todos':
+        where_clause += " AND origen_Turno = ?"
+        params.append(filtro_turno)
+
+    if filtro_estado and filtro_estado != 'todos':
+        if filtro_estado == '0-5km':
+            where_clause += " AND Observaciones = 'Asignado (0-5 km)'"
+        elif filtro_estado == '5-10km':
+            where_clause += " AND Observaciones = 'Asignado (5-10 km)'"
+        elif filtro_estado == '10-30km':
+            where_clause += " AND Observaciones = 'Asignado (10-30 km)'"
+        elif filtro_estado == 'no-asignadas':
+            where_clause += " AND Observaciones LIKE 'No Asignada%'"
 
     try:
         total_items_query = f"SELECT COUNT(*) {base_query}{where_clause}"
@@ -147,11 +176,19 @@ def get_asignaciones():
         data_query = f"SELECT * {base_query}{where_clause} LIMIT ? OFFSET ?"
         query_results = conn.execute(data_query, (*params, limit, offset)).fetchall()
         
+        departamentos_rows = conn.execute("SELECT DISTINCT origen_Departamento FROM resultados_asignacion WHERE origen_Departamento IS NOT NULL ORDER BY origen_Departamento").fetchall()
+        turnos_rows = conn.execute("SELECT DISTINCT origen_Turno FROM resultados_asignacion WHERE origen_Turno IS NOT NULL ORDER BY origen_Turno").fetchall()
+        
+        all_departamentos = [row[0] for row in departamentos_rows]
+        all_turnos = [row[0] for row in turnos_rows]
+
         return jsonify({
             'totalItems': total_items,
             'asignaciones': [dict(row) for row in query_results],
             'totalPages': math.ceil(total_items / limit),
-            'currentPage': page
+            'currentPage': page,
+            'allDepartamentos': all_departamentos,
+            'allTurnos': all_turnos
         })
     except Exception as e:
         print(f"ERROR al obtener asignaciones: {e}")
@@ -192,7 +229,8 @@ def cargar_planillas():
         finally:
             if conn: conn.close()
     else:
-        return jsonify({"error": "El procesamiento de los archivos falló o no contenían datos válidos."}), 500
+        print("ADVERTENCIA: El procesamiento de archivos no generó datos válidos.")
+        return jsonify({"error": "El procesamiento de los archivos falló o no contenían datos válidos."}), 400
 
 @app.route('/api/descargar-excel', methods=['GET'])
 def descargar_excel():
@@ -201,7 +239,7 @@ def descargar_excel():
     """
     departamento = request.args.get('departamento')
     turno = request.args.get('turno')
-    observaciones = request.args.get('observaciones')
+    estado_asignacion = request.args.get('estado_asignacion')
 
     conn = get_db_connection()
     try:
@@ -214,9 +252,16 @@ def descargar_excel():
         if turno and turno != 'todos':
             query += " AND origen_Turno = ?"
             params.append(turno)
-        if observaciones and observaciones != 'todos':
-            query += " AND Observaciones = ?"
-            params.append(observaciones)
+        
+        if estado_asignacion and estado_asignacion != 'todos':
+            if estado_asignacion == '0-5km':
+                query += " AND Observaciones = 'Asignado (0-5 km)'"
+            elif estado_asignacion == '5-10km':
+                query += " AND Observaciones = 'Asignado (5-10 km)'"
+            elif estado_asignacion == '10-30km':
+                query += " AND Observaciones = 'Asignado (10-30 km)'"
+            elif estado_asignacion == 'no-asignadas':
+                query += " AND Observaciones LIKE 'No Asignada%'"
             
         df = pd.read_sql_query(query, conn, params=tuple(params))
         
@@ -225,13 +270,26 @@ def descargar_excel():
 
         df.rename(columns={
             'origen_Departamento': 'Origen - Departamento', 'origen_CUE': 'Origen - CUE',
-            'origen_Numero_Escuela': 'Origen - N° Escuela', 'origen_Nombre_Escuela': 'Origen - Nombre',
-            'origen_Division': 'Origen - División', 'origen_Turno': 'Origen - Turno',
+            'origen_Numero_Escuela': 'Origen - N° Escuela', 'origen_Numero_Anexo': 'Origen - Anexo',
+            'origen_Nombre_Escuela': 'Origen - Nombre', 'origen_Division': 'Origen - División', 'origen_Turno': 'Origen - Turno',
             'destino_Departamento': 'Destino - Departamento', 'destino_CUE': 'Destino - CUE',
-            'destino_Numero_Escuela': 'Destino - N° Escuela', 'destino_Nombre_Escuela': 'Destino - Nombre',
+            'destino_Numero_Escuela': 'Destino - N° Escuela', 'destino_Numero_Anexo': 'Destino - Anexo',
+            'destino_Nombre_Escuela': 'Destino - Nombre',
             'destino_Division': 'Destino - División', 'destino_Turno': 'Destino - Turno',
             'Distancia_KM': 'Distancia (KM)', 'Observaciones': 'Observaciones'
         }, inplace=True)
+
+        columnas_excel = [
+            'Origen - Departamento', 'Origen - CUE', 'Origen - N° Escuela', 'Origen - Anexo',
+            'Origen - Nombre', 'Origen - División', 'Origen - Turno',
+            'Destino - Departamento', 'Destino - CUE', 'Destino - N° Escuela', 'Destino - Anexo',
+            'Destino - Nombre', 'Destino - División', 'Destino - Turno',
+            'Distancia (KM)', 'Observaciones'
+        ]
+        
+        columnas_existentes = [col for col in columnas_excel if col in df.columns]
+        df = df[columnas_existentes]
+
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:

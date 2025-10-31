@@ -9,23 +9,32 @@ import Alert from 'react-bootstrap/Alert';
 interface PanelDescargasProps {
   departamentos: string[];
   turnos: string[];
-  observaciones: string[];
 }
 
-function PanelDescargas({ departamentos, turnos, observaciones }: PanelDescargasProps) {
+const opcionesEstadoAsignacion = [
+  { value: '0-5km', label: 'Asignado (0-5 km)' },
+  { value: '5-10km', label: 'Asignado (5-10 km)' },
+  { value: '10-30km', label: 'Asignado (10-30 km)' },
+  { value: 'no-asignadas', label: 'No Asignadas (Excepciones)' },
+];
+
+function PanelDescargas({ departamentos, turnos }: PanelDescargasProps) {
   const [filtroDepto, setFiltroDepto] = useState('todos');
   const [filtroTurno, setFiltroTurno] = useState('todos');
-  const [filtroObs, setFiltroObs] = useState('todos');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
   const [error, setError] = useState('');
 
-  const handleDownload = (depto: string, turno: string, obs: string) => {
+  const handleDownload = (depto: string, turno: string, estado: string) => {
     setError('');
     let url = 'http://127.0.0.1:5000/api/descargar-excel?';
     
     const params = new URLSearchParams();
     if (depto !== 'todos') params.append('departamento', depto);
     if (turno !== 'todos') params.append('turno', turno);
-    if (obs !== 'todos') params.append('observaciones', obs);
+    
+    if (estado !== 'todos') {
+      params.append('estado_asignacion', estado);
+    }
     
     url += params.toString();
 
@@ -34,7 +43,12 @@ function PanelDescargas({ departamentos, turnos, observaciones }: PanelDescargas
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `reporte_asignaciones.xlsx`);
+        
+        const nombreArchivo = `reporte_asignaciones_${depto}_${turno}_${estado}.xlsx`
+            .replace(/ /g, '_')
+            .toLowerCase();
+        link.setAttribute('download', nombreArchivo);
+        
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -48,16 +62,19 @@ function PanelDescargas({ departamentos, turnos, observaciones }: PanelDescargas
     <>
       {error && <Alert variant="danger">{error}</Alert>}
       
-      <h5>Descargas Rápidas por Observación</h5>
+      <h5>Descargas Rápidas por Estado</h5>
       <div className="d-flex flex-wrap gap-2 mb-4">
-        <Button variant="outline-success" onClick={() => handleDownload('todos', 'todos', 'Asignado a escuela cercana')}>
-          Descargar Asignados
+        <Button variant="outline-success" onClick={() => handleDownload('todos', 'todos', '0-5km')}>
+          Asignados (0-5 km)
         </Button>
-        <Button variant="outline-warning" onClick={() => handleDownload('todos', 'todos', 'Excepción: sin candidatos disponibles')}>
-          Descargar Sin Candidatos
+        <Button variant="outline-primary" onClick={() => handleDownload('todos', 'todos', '5-10km')}>
+          Asignados (5-10 km)
         </Button>
-        <Button variant="outline-danger" onClick={() => handleDownload('todos', 'todos', 'Excepcion: no asignada por falta de datos')}>
-          Descargar Con Datos Faltantes
+        <Button variant="outline-warning" onClick={() => handleDownload('todos', 'todos', '10-30km')}>
+          Asignados (10-30 km)
+        </Button>
+        <Button variant="outline-danger" onClick={() => handleDownload('todos', 'todos', 'no-asignadas')}>
+          Todas las No Asignadas
         </Button>
       </div>
       
@@ -85,10 +102,10 @@ function PanelDescargas({ departamentos, turnos, observaciones }: PanelDescargas
         </Col>
         <Col md={3}>
           <Form.Group>
-            <Form.Label><strong>Observación</strong></Form.Label>
-            <Form.Select value={filtroObs} onChange={e => setFiltroObs(e.target.value)}>
+            <Form.Label><strong>Estado Asignación</strong></Form.Label>
+            <Form.Select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
               <option value="todos">Todas</option>
-              {observaciones.map(opcion => <option key={opcion} value={opcion}>{opcion}</option>)}
+              {opcionesEstadoAsignacion.map(opcion => <option key={opcion.value} value={opcion.value}>{opcion.label}</option>)}
             </Form.Select>
           </Form.Group>
         </Col>
@@ -96,8 +113,8 @@ function PanelDescargas({ departamentos, turnos, observaciones }: PanelDescargas
           <Button 
             variant="primary" 
             className="w-100"
-            onClick={() => handleDownload(filtroDepto, filtroTurno, filtroObs)}
-            disabled={filtroDepto === 'todos' && filtroTurno === 'todos' && filtroObs === 'todos'}
+            onClick={() => handleDownload(filtroDepto, filtroTurno, filtroEstado)}
+            disabled={filtroDepto === 'todos' && filtroTurno === 'todos' && filtroEstado === 'todos'}
           >
             Descargar
           </Button>

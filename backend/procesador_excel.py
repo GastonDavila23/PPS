@@ -11,7 +11,12 @@ COLUMNAS_CONOCIDAS = {
     'Turno': ['Turno'],
     'Matricula': ['Matrícula', 'Matricula'],
     'Latitud': ['latitud', 'Latitud', 'lat'],
-    'Longitud': ['longitud', 'Longitud', 'lon', 'lng']
+    'Longitud': ['longitud', 'Longitud', 'lon', 'lng'],
+    'ID_Escuela': ['ID_Escuela', 'ID Escuela', 'id_escuela'],
+    'Curso': ['Curso', 'curso'],
+    'Subcue': ['Subcue'],
+    'Nivel': ['Nivel'],
+    'Gestion': ['Gestion']
 }
 
 def normalizar_columnas(df):
@@ -29,41 +34,65 @@ def normalizar_columnas(df):
     return df_renombrado
 
 def procesar_archivos_y_actualizar(lista_de_archivos, df_existente):
-    dataframes_procesados = [df_existente.copy()] if not df_existente.empty else []
+    data_files_dfs = []
+    coord_files_dfs = []
 
     for archivo in lista_de_archivos:
         try:
-            df_sheets = pd.read_excel(archivo, sheet_name=None)
-            df_nuevo = pd.concat(df_sheets.values(), ignore_index=True)
+            if archivo.filename.endswith('.csv'):
+                df_nuevo = pd.read_csv(archivo, on_bad_lines='skip')
+            else:
+                df_sheets = pd.read_excel(archivo, sheet_name=None)
+                df_nuevo = pd.concat(df_sheets.values(), ignore_index=True)
+                
             df_nuevo_normalizado = normalizar_columnas(df_nuevo)
             
-            if 'CUE' in df_nuevo_normalizado.columns:
-                dataframes_procesados.append(df_nuevo_normalizado)
+            if 'Latitud' in df_nuevo_normalizado.columns and 'Longitud' in df_nuevo_normalizado.columns:
+                coord_files_dfs.append(df_nuevo_normalizado)
+            else:
+                data_files_dfs.append(df_nuevo_normalizado)
+                    
         except Exception as e:
             print(f"ADVERTENCIA: No se pudo procesar el archivo '{archivo.filename}'. Error: {e}")
             continue
 
-    if not dataframes_procesados:
+    if not data_files_dfs or not coord_files_dfs:
+        print("ERROR: Se necesitan ambos tipos de archivos (datos de división/turno y datos de coordenadas) para procesar.")
         return pd.DataFrame()
 
-    df_combinado = pd.concat(dataframes_procesados, ignore_index=True)
-    
-    if 'CUE' in df_combinado.columns:
-        df_combinado['CUE'] = df_combinado['CUE'].astype(str).str.strip()
-        df_combinado.dropna(subset=['CUE'], inplace=True)
-        df_combinado = df_combinado[df_combinado['CUE'] != 'nan']
-        df_final = df_combinado.groupby('CUE').last().reset_index()
-    else:
-        df_final = df_combinado
-        
-    if 'Latitud' in df_final.columns:
-        df_final['Latitud'] = pd.to_numeric(df_final['Latitud'], errors='coerce')
-        df_final.loc[~df_final['Latitud'].between(-90, 90), 'Latitud'] = np.nan
+    df_data = pd.concat(data_files_dfs, ignore_index=True)
 
-    if 'Longitud' in df_final.columns:
-        df_final['Longitud'] = pd.to_numeric(df_final['Longitud'], errors='coerce')
-        df_final.loc[~df_final['Longitud'].between(-180, 180), 'Longitud'] = np.nan
+    if 'CUE' in df_data.columns:
+        df_data['CUE'] = df_data['CUE'].astype(str).str.split('.').str[0].str.strip()
+        df_data['CUE'].replace(['nan', 'None', ''], np.nan, inplace=True)
+    else:
+        df_data['CUE'] = np.nan
+
+    if 'Turno' in df_data.columns:
+        turno_map = {'mañana': 'Mañana', 'tarde': 'Tarde'}
+        df_data['Turno'] = df_data['Turno'].astype(str).str.lower().map(turno_map)
+
+    df_data.dropna(subset=['CUE', 'Turno'], inplace=True)
     
+    df_coords = pd.concat(coord_files_dfs, ignore_index=True)
+
+    if 'CUE' in df_coords.columns:
+        df_coords['CUE'] = df_coords['CUE'].astype(str).str.split('.').str[0].str.strip()
+        df_coords['CUE'].replace(['nan', 'None', ''], np.nan, inplace=True)
+    else:
+        df_coords['CUE'] = np.nan
+    
+    if 'Latitud' in df_coords.columns:
+        df_coords['Latitud'] = pd.to_numeric(df_coords['Latitud'], errors='coerce')
+    if 'Longitud' in df_coords.columns:
+        df_coords['Longitud'] = pd.to_numeric(df_coords['Longitud'], errors='coerce')
+            
+    df_coords_lookup = df_coords[['CUE', 'Latitud', 'Longitud']].copy()
+    df_coords_lookup.dropna(inplace=True)
+    df_coords_lookup.drop_duplicates(subset=['CUE'], keep='last', inplace=True)
+    
+    df_merged = pd.merge(df_data, df_coords_lookup, on='CUE', how='inner')
+
     formato_final_columnas = [
         'ID_Escuela', 'CUE', 'Subcue', 'Numero_Escuela', 'Numero_Anexo',
         'Nivel', 'Gestion', 'Nombre_Escuela', 'Departamento', 'Latitud',
@@ -71,13 +100,13 @@ def procesar_archivos_y_actualizar(lista_de_archivos, df_existente):
     ]
     
     for col in formato_final_columnas:
-        if col not in df_final.columns:
-            df_final[col] = None
+        if col not in df_merged.columns:
+            df_merged[col] = None
 
-    df_final.fillna({
+    df_merged.fillna({
         'Nivel': 'Primario', 'Gestion': 'Pública', 'Curso': '6°', 
-        'Subcue': 0, 'ID_Escuela': 0, 'Matricula': 0
+        'Subcue': 0, 'ID_Escuela': 0, 'Matricula': 0, 'Numero_Anexo': 0
     }, inplace=True)
     
-    print(f"Proceso de actualización completo. Total de registros únicos: {len(df_final)}")
-    return df_final[formato_final_columnas]
+    print(f"Proceso de fusión completo. Total de 'slots' (filas) con datos y coordenadas: {len(df_merged)}")
+    return df_merged[formato_final_columnas]

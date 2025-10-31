@@ -21,19 +21,19 @@ CREATE TABLE IF NOT EXISTS escuelas_data (
     Division TEXT, Turno TEXT, Matricula REAL
 );
 ''')
-print("Tabla 'escuelas_data' creada.")
+print("Tabla 'escuelas_data' (flexible) creada.")
 
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS resultados_asignacion (
-    "Origen - Departamento" TEXT, "Origen - CUE" TEXT, "Origen - N° Escuela" TEXT,
-    "Origen - Nombre" TEXT, "Origen - División" TEXT, "Origen - Turno" TEXT,
-    "Destino - Departamento" TEXT, "Destino - CUE" TEXT, "Destino - N° Escuela" TEXT,
-    "Destino - Nombre" TEXT, "Destino - División" TEXT, "Destino - Turno" TEXT,
-    "Distancia (KM)" REAL, "Observaciones" TEXT
+    origen_Departamento TEXT, origen_CUE TEXT, origen_Numero_Escuela TEXT,
+    origen_Numero_Anexo TEXT, origen_Nombre_Escuela TEXT, origen_Division TEXT, origen_Turno TEXT,
+    destino_Departamento TEXT, destino_CUE TEXT, destino_Numero_Escuela TEXT,
+    destino_Numero_Anexo TEXT, destino_Nombre_Escuela TEXT, destino_Division TEXT, destino_Turno TEXT,
+    Distancia_KM REAL, Observaciones TEXT
 );
 ''')
-print("Tabla 'resultados_asignacion' creada.")
+print("Tabla 'resultados_asignacion' (flexible) creada.")
 
 conn.commit()
 conn.close()
-print("\nBase de datos y tablas listas.")
+print("\nBase de datos y tablas listas (esquema flexible).")
