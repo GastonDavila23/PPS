@@ -107,32 +107,29 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
     cd backend
     ```
 
-2.  (Recomendado) Crea un entorno virtual
+2.  Crea un entorno virtual
     ```bash
     python -m venv venv
-    source venv/bin/activate  # En Windows: venv\Scripts\activate
     ```
 
-3.  Instala las dependencias de Python
+3.  Ingresa al entorno virtual
+    ```bash
+    .\venv\Scripts\activate
+    ```
+    
+4.  Instala las dependencias de Python
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  Crea la base de datos y sus tablas
+5.  Crea el admin 
     ```bash
-    python crear_db.py
+    py crear_admin.py
     ```
 
-5.  (MUY IMPORTANTE) Asigna tu email como Administrador
-    * Abre `crear_admin.py` y cambia el `ADMIN_EMAIL` por el tuyo.
-    * Luego, ejecuta el script:
+6.  Inicia el servidor del backend
     ```bash
-    python crear_admin.py
-    ```
-
-6.  Inicia el servidor del backend (Se ejecutará en `http://127.0.0.1:5000`)
-    ```bash
-    flask run
+    py asignador.py
     ```
 
 ### 3. Configurar el frontend
@@ -171,7 +168,7 @@ Este proyecto requiere una cuenta de Auth0 para funcionar.
 
 1.  **Iniciar Sesión:** Ve a `http://localhost:5173`. Inicia sesión con el email que configuraste como admin.
 2.  **Aprobar tu cuenta:** Al ser tu primer login, serás "profesor-pendiente". El sistema aún no te mostrará nada.
-    * Ve a la terminal del backend y ejecuta `python crear_admin.py` de nuevo para forzar tu rol a "admin".
+    * Ve a la terminal del backend y ejecuta `py crear_admin.py` de nuevo para forzar tu rol a "admin".
     * Refresca la página.
 3.  **Cargar Planillas:**
     * Haz clic en "Cargar Planillas".
