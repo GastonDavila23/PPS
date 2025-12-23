@@ -1,42 +1,47 @@
 @echo off
 title Instalador Automatico PPS
-cd /d "%~dp0"
+SET "BASE_DIR=%~dp0"
 
 echo ==========================================
 echo   INSTALADOR DE DEPENDENCIAS - PPS
 echo ==========================================
 echo.
-echo 1. Configurando el BACKEND...
 
-if not exist "backend" (
+echo 1. Entrando al BACKEND...
+
+pushd "%BASE_DIR%backend"
+
+if errorlevel 1 (
     echo [ERROR] No encuentro la carpeta 'backend'.
-    echo Asegurate de que este archivo este junto a las carpetas 'backend' y 'frontend'.
     pause
     exit
 )
 
-cd backend
+echo Configurando Python...
 python -m venv venv
 call venv\Scripts\activate
 pip install -r requirements.txt
 echo.
-echo * Nota: Se conservara la base de datos existente.
-echo.
 echo [OK] Backend listo.
-echo.
-cd /d "%~dp0"
 
-echo 2. Configurando el FRONTEND...
-if not exist "frontend" (
+popd
+echo.
+
+echo 2. Entrando al FRONTEND...
+pushd "%BASE_DIR%frontend"
+
+if errorlevel 1 (
     echo [ERROR] No encuentro la carpeta 'frontend'.
     pause
     exit
 )
 
-cd frontend
+echo Instalando librerias de Node...
 call npm install
 echo.
 echo [OK] Frontend listo.
+
+popd
 echo.
 
 echo ==========================================
