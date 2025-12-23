@@ -13,7 +13,7 @@ necesarias para que el sistema funcione:
 3. 'resultados_asignacion': Donde se guardan los resultados del cálculo.
 
 MODO DE USO (desde la terminal, en la carpeta /backend):
-> python crear_db.py
+> py crear_db.py
 ================================================================================
 """
 
