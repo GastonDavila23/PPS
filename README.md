@@ -60,38 +60,6 @@ Este proyecto está dividido en dos partes principales: un backend API REST y un
 
 ---
 
-## Estructura del Proyecto
-
-```
-/pps (Raíz del proyecto)
-├── /backend/
-│   ├── asignador.py # El servidor Flask principal (API REST)
-│   ├── procesador_excel.py # Motor de limpieza y fusión (ETL)
-│   ├── crear_db.py # Script para crear las tablas de la BD
-│   ├── crear_admin.py # Script para asignar un rol de admin
-│   ├── asignador.db # Archivo de la base de datos
-│   └── requirements.txt # Dependencias de Python
-├── /frontend/
-│   ├── package.json # Dependencias de Node.js
-│   └── /src/
-│       ├── /components/ # Componentes de React
-│       │   ├── CargarPlanilla.tsx
-│       │   ├── Header.tsx
-│       │   ├── PanelAdmin.tsx
-│       │   ├── PanelDescargas.tsx
-│       │   └── TablaAsignaciones.tsx
-│       ├── /data/ # tipos utilizados en el proyecto
-│       │   └── mockAsignaciones.ts
-│       ├── /assets/ # imagenes del proyecto
-│       │   └── logo.png
-│       ├── App.tsx # Componente raíz, orquesta toda la App
-│       ├── main.tsx # Punto de entrada, configura Auth0
-│       └── index.html # renderización del proyecto
-...
-```
-
----
-
 ## Instalación y Puesta en Marcha
 
 Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
@@ -129,7 +97,7 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
 
 6.  Inicia el servidor del backend
     ```bash
-    py asignador.py
+    py app.py
     ```
 
 ### 3. Configurar el frontend
