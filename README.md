@@ -1,10 +1,10 @@
-# Sistema de Asignador Geográfico de Profesores (PPS)
+# Sistema Asignador Geográfico de Profesores (PPS)
 
 Este proyecto es un sistema web full-stack diseñado para resolver la compleja logística de asignación de profesores a escuelas, basado en criterios de cercanía geográfica y disponibilidad. El sistema está orientado a la gestión de la Dirección General de Escuelas (DGE) y sirve como Proyecto Final de Prácticas Profesionales Supervisadas.
 
 ---
 
-## 💡 Problema y Solución
+## Problema y Solución
 
 La reubicación y asignación de profesores (especialmente en niveles primarios) es un desafío logístico que involucra cientos de variables: escuelas de origen, escuelas de destino, turnos, divisiones y, sobre todo, distancias.
 
@@ -18,7 +18,7 @@ Este sistema automatiza el proceso completo:
 
 ---
 
-## ✨ Características Principales
+## Características Principales
 
 * **Carga de Múltiples Archivos:** Ingesta de archivos `.xlsx` y `.csv`, con lectura de múltiples hojas.
 * **Motor de Limpieza de Datos:** Normalización automática de nombres de columnas (ej: "Numero Escuela" y "N° Escuela" se mapean a `Numero_Escuela`).
@@ -35,7 +35,7 @@ Este sistema automatiza el proceso completo:
 
 ---
 
-## 🛠️ Tech Stack (Tecnologías Usadas)
+## Tech Stack (Tecnologías Usadas)
 
 Este proyecto está dividido en dos partes principales: un backend API REST y un frontend SPA (Single Page Application).
 
@@ -60,39 +60,7 @@ Este proyecto está dividido en dos partes principales: un backend API REST y un
 
 ---
 
-## 📁 Estructura del Proyecto
-
-```
-/pps (Raíz del proyecto)
-├── /backend/
-│   ├── asignador.py # El servidor Flask principal (API REST)
-│   ├── procesador_excel.py # Motor de limpieza y fusión (ETL)
-│   ├── crear_db.py # Script para crear las tablas de la BD
-│   ├── crear_admin.py # Script para asignar un rol de admin
-│   ├── asignador.db # Archivo de la base de datos
-│   └── requirements.txt # Dependencias de Python
-├── /frontend/
-│   ├── package.json # Dependencias de Node.js
-│   └── /src/
-│       ├── /components/ # Componentes de React
-│       │   ├── CargarPlanilla.tsx
-│       │   ├── Header.tsx
-│       │   ├── PanelAdmin.tsx
-│       │   ├── PanelDescargas.tsx
-│       │   └── TablaAsignaciones.tsx
-│       ├── /data/ # tipos utilizados en el proyecto
-│       │   └── mockAsignaciones.ts
-│       ├── /assets/ # imagenes del proyecto
-│       │   └── logo.png
-│       ├── App.tsx # Componente raíz, orquesta toda la App
-│       ├── main.tsx # Punto de entrada, configura Auth0
-│       └── index.html # renderización del proyecto
-...
-```
-
----
-
-## ⚙️ Instalación y Puesta en Marcha
+## Instalación y Puesta en Marcha
 
 Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
 
@@ -129,7 +97,7 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
 
 6.  Inicia el servidor del backend
     ```bash
-    py asignador.py
+    py app.py
     ```
 
 ### 3. Configurar el frontend
@@ -164,7 +132,7 @@ Este proyecto requiere una cuenta de Auth0 para funcionar.
 
 ---
 
-## 🚀 Modo de Uso (Flujo de Admin)
+## Modo de Uso (Flujo de Admin)
 
 1.  **Iniciar Sesión:** Ve a `http://localhost:5173`. Inicia sesión con el email que configuraste como admin.
 2.  **Aprobar tu cuenta:** Al ser tu primer login, serás "profesor-pendiente". El sistema aún no te mostrará nada.
