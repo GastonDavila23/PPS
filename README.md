@@ -130,6 +130,16 @@ Este proyecto requiere una cuenta de Auth0 para funcionar.
     * Reemplaza `domain` y `clientId` con los de tu aplicación Auth0.
     * Asegúrate que `audience` coincida con el "Identifier" de tu API de Auth0.
 
+### 5. Automatización para el Usuario (Archivo .bat)
+Para facilitar la ejecución diaria sin abrir terminales manualmente, el proyecto incluye un script de automatización:
+
+1. Ubica el archivo `iniciar-proyecto.bat` en la raíz de la carpeta `PPS`.
+2. Hazle clic derecho y selecciona **"Enviar a > Escritorio (crear acceso directo)"**.
+3. (Opcional) Cambia el icono del acceso directo usando el archivo `logo.ico` ubicado en `frontend/public`.
+
+> **Nota:** Al ejecutar este archivo, se levantarán automáticamente el backend (Flask), el frontend (Vite) y se abrirá el navegador en la dirección del proyecto.
+
+
 ---
 
 ## Modo de Uso (Flujo de Admin)
