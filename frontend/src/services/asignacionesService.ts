@@ -3,8 +3,12 @@ import axios from 'axios';
 import { CONFIG } from '../config/constants';
 import type { AsignacionesParams, AsignacionesResponse, RolUsuario } from '../types/index';
 
-// Creamos una instancia de axios para no repetir la URL base siempre
-const apiClient = axios.create({
+/**
+ * Instancia de axios configurada centralmente.
+ * Se exporta para que cualquier componente (como CargarPlanilla.tsx) 
+ * use la misma configuración de base y headers.
+ */
+export const apiClient = axios.create({
   baseURL: CONFIG.API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -16,7 +20,7 @@ export const asignacionesService = {
    * Obtiene la lista de asignaciones filtrada y paginada.
    */
   getAll: async (params: AsignacionesParams): Promise<AsignacionesResponse> => {
-    // axios.get(url, { params: { ... } }) se encarga de armar el query string
+    // axios.get adjunta automáticamente los params como query string (?page=1&limit=15...)
     const response = await apiClient.get<AsignacionesResponse>('/asignaciones', { params });
     return response.data;
   },
@@ -29,6 +33,16 @@ export const asignacionesService = {
     return response.data;
   },
 
-  // Aquí podrías agregar métodos futuros, ej:
-  // uploadPlanillas: (formData) => ...
+  /**
+   * Sube los archivos Excel/CSV al backend para el proceso de ETL.
+   * Maneja la configuración necesaria para el envío de archivos (FormData).
+   */
+  uploadPlanillas: async (formData: FormData) => {
+    const response = await apiClient.post('/cargar-planillas', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };

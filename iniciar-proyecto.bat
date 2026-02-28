@@ -1,9 +1,9 @@
 @echo off
 title Sistema DGE - Asignador de Profesores
 
-:: 1. Iniciar el Backend (Flask) minimizado
-echo Iniciando Backend...
-start /min cmd /k "cd backend && python app.py"
+:: 1. Iniciar el Backend (Flask) con entorno virtual minimizado
+echo Iniciando Backend con VENV...
+start /min cmd /k "cd backend && .\venv\Scripts\activate && python app.py"
 
 :: 2. Iniciar el Frontend (Vite) minimizado
 echo Iniciando Frontend...
