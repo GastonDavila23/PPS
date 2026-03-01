@@ -36,7 +36,6 @@ def construir_filtros_sql(filtros: dict):
 
 def calcular_mejor_destino(profe_origen, pool_destinos):
     lat_o, lon_o = profe_origen.get('Latitud'), profe_origen.get('Longitud')
-    # Manejo seguro de coordenadas que no pudieron convertirse
     try:
         if pd.isna(lat_o) or pd.isna(lon_o):
             return {"destino": profe_origen, "dist": 0.0, "obs": ESTADOS["FALTA_GEO"]}
@@ -83,7 +82,6 @@ def recalcular_y_guardar_asignaciones():
     resultados_finales = []
     for _, fila in df_escuelas.iterrows():
         asignacion = calcular_mejor_destino(fila, pool_disponible)
-        # Diccionario completo para evitar errores de columnas faltantes
         res = {
             'origen_Departamento': fila.get('Departamento'),
             'origen_CUE': fila.get('CUE'),

@@ -1,206 +1,138 @@
-/**
- * ================================================================================
- * ARCHIVO: PanelDescargas.tsx
- * ================================================================================
- * PROPÓSITO:
- * Este componente define la interfaz de usuario (UI) que se muestra dentro del
- * modal (ventana emergente) de "Descargar Reporte".
- *
- * MANEJA:
- * - La UI para seleccionar filtros de descarga (Departamento, Turno, Estado).
- * - Ofrece "Descargas Rápidas" (botones pre-filtrados) para los reportes más comunes.
- * - Mantiene el estado de los filtros seleccionados (`filtroDepto`, `filtroTurno`, etc.).
- * - Construye la URL de la API (GET /api/descargar-excel) con los parámetros
- * (filtros) seleccionados.
- * - Maneja la lógica de descarga de archivos:
- * - Llama a la API esperando un 'blob' (el archivo Excel).
- * - Crea un enlace (<a>) temporal en el navegador para simular un clic
- * y descargar el archivo con un nombre descriptivo.
- * ================================================================================
- */
+import { useState } from 'react';
+import axios from 'axios';
+import { CloudDownload, FileEarmarkExcel, Funnel, LightningCharge, ExclamationCircle } from 'react-bootstrap-icons';
 
-// --- Importaciones ---
-import { useState } from 'react'; // Hook de React para manejar el estado de los filtros.
-import axios from 'axios'; // Para realizar la llamada (GET) a la API del backend.
-// Componentes de React-Bootstrap para la UI
-import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
-import Alert from 'react-bootstrap/Alert';
-
-/**
- * --- Definición de Props ---
- * Define las propiedades que este componente recibe de su padre (App.tsx).
- */
 interface PanelDescargasProps {
-  departamentos: string[]; // Lista de departamentos para el filtro.
-  turnos: string[];        // Lista de turnos para el filtro.
+  departamentos: string[];
+  turnos: string[];
 }
 
-/**
- * --- Constantes ---
- * Opciones fijas para el filtro de "Estado de Asignación".
- * Se definen aquí porque son estáticas y no dependen de la API.
- */
 const opcionesEstadoAsignacion = [
-  { value: '0-5km', label: 'Asignado (0-5 km)' },
-  { value: '5-10km', label: 'Asignado (5-10 km)' },
-  { value: '10-30km', label: 'Asignado (10-30 km)' },
-  { value: 'no-asignadas', label: 'No Asignadas (Excepciones)' },
+  { value: '0-5km', label: 'Asignado (0-5 km)', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { value: '5-10km', label: 'Asignado (5-10 km)', color: 'text-blue-600', bg: 'bg-blue-50' },
+  { value: '10-30km', label: 'Asignado (10-30 km)', color: 'text-amber-600', bg: 'bg-amber-50' },
+  { value: 'no-asignadas', label: 'No Asignadas', color: 'text-rose-600', bg: 'bg-rose-50' },
 ];
 
-/**
- * --- Definición del Componente ---
- * @param {PanelDescargasProps} props - Las listas de departamentos y turnos.
- */
 function PanelDescargas({ departamentos, turnos }: PanelDescargasProps) {
-  
-  // --- Estados Internos ---
-  // Almacenan la selección actual de los filtros de descarga personalizada.
   const [filtroDepto, setFiltroDepto] = useState('todos');
   const [filtroTurno, setFiltroTurno] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
-  // Almacena un mensaje de error si la descarga falla (ej: 0 resultados).
   const [error, setError] = useState('');
 
-  // --- Manejador de Eventos ---
-
-  /**
-   * Se activa cuando el usuario hace clic en CUALQUIER botón de descarga
-   * (rápida o personalizada).
-   * @param {string} depto - El filtro de departamento seleccionado.
-   * @param {string} turno - El filtro de turno seleccionado.
-   * @param {string} estado - El filtro de estado seleccionado.
-   */
   const handleDownload = (depto: string, turno: string, estado: string) => {
-    setError(''); // Limpia errores anteriores.
-    
-    // 1. Construir la URL base
+    setError('');
     let url = 'http://127.0.0.1:5000/api/descargar-excel?';
-    
-    // 2. Añadir parámetros (filtros) a la URL de forma segura
     const params = new URLSearchParams();
     if (depto !== 'todos') params.append('departamento', depto);
     if (turno !== 'todos') params.append('turno', turno);
-    if (estado !== 'todos') {
-      params.append('estado_asignacion', estado);
-    }
-    
-    // 3. Unir la URL base con los parámetros (ej: "...?departamento=MAIPU&turno=Mañana")
+    if (estado !== 'todos') params.append('estado_asignacion', estado);
     url += params.toString();
 
-    // 4. Llamar a la API con Axios
-    axios.get(url, { 
-      responseType: 'blob' // ¡MUY IMPORTANTE! Le dice a Axios que espere un archivo.
-    })
+    axios.get(url, { responseType: 'blob' })
       .then(response => {
-        // 5. Manejar la Respuesta (el archivo 'blob')
-        // Crea una URL temporal en el navegador para el archivo recibido.
         const url = window.URL.createObjectURL(new Blob([response.data]));
-        // Crea un elemento <a> (enlace) invisible.
         const link = document.createElement('a');
         link.href = url;
-        
-        // Crea un nombre de archivo dinámico y limpio.
-        const nombreArchivo = `reporte_asignaciones_${depto}_${turno}_${estado}.xlsx`
-            .replace(/ /g, '_')
-            .toLowerCase();
-        // Asigna el nombre de archivo al enlace.
+        const nombreArchivo = `reporte_${depto}_${turno}_${estado}.xlsx`.replace(/ /g, '_').toLowerCase();
         link.setAttribute('download', nombreArchivo);
-        
-        // 6. Simular el clic para Iniciar la Descarga
-        document.body.appendChild(link); // Añade el enlace al documento.
-        link.click(); // Simula el clic.
-        link.remove(); // Limpia y remueve el enlace.
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
       })
-      .catch(() => {
-        // 7. Manejar Error
-        // Ocurre si la API devuelve un error (ej: 404 - Sin datos).
-        setError('No se encontraron datos con los filtros seleccionados.');
-      });
+      .catch(() => setError('No se encontraron datos con los filtros seleccionados.'));
   };
 
-  // --- Renderizado del Componente (UI) ---
   return (
-    <>
-      {/* Alerta condicional para mostrar feedback de error */}
-      {error && <Alert variant="danger">{error}</Alert>}
+    <div className="flex flex-col gap-6">
       
-      {/* --- Sección 1: Descargas Rápidas --- */}
-      <h5>Descargas Rápidas por Estado</h5>
-      <div className="d-flex flex-wrap gap-2 mb-4">
-        {/* Cada botón llama a handleDownload con filtros predefinidos */}
-        <Button variant="outline-success" onClick={() => handleDownload('todos', 'todos', '0-5km')}>
-          Asignados (0-5 km)
-        </Button>
-        <Button variant="outline-primary" onClick={() => handleDownload('todos', 'todos', '5-10km')}>
-          Asignados (5-10 km)
-        </Button>
-        <Button variant="outline-warning" onClick={() => handleDownload('todos', 'todos', '10-30km')}>
-          Asignados (10-30 km)
-        </Button>
-        <Button variant="outline-danger" onClick={() => handleDownload('todos', 'todos', 'no-asignadas')}>
-          Todas las No Asignadas
-        </Button>
-      </div>
-      
-      <hr /> {/* Línea divisoria */}
+      {/* SECCIÓN 1: DESCARGAS RÁPIDAS */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <LightningCharge className="text-amber-500" size={14} />
+          <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Accesos Directos</h5>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {opcionesEstadoAsignacion.map((opt) => (
+            <button 
+              key={opt.value} 
+              onClick={() => handleDownload('todos', 'todos', opt.value)}
+              className={`flex items-center justify-between p-4 rounded-xl border border-slate-100 transition-all hover:shadow-md hover:scale-[1.02] active:scale-95 ${opt.bg}`}
+            >
+              <div className="flex flex-col text-left">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${opt.color}`}>{opt.label}</span>
+                <span className="text-[8px] text-slate-400 font-bold uppercase mt-1">Descarga Directa</span>
+              </div>
+              <CloudDownload className={opt.color} size={16} />
+            </button>
+          ))}
+        </div>
+      </section>
 
-      {/* --- Sección 2: Descarga Personalizada --- */}
-      <h5>Descarga Personalizada por Filtros</h5>
-      <Row className="align-items-end g-3">
-        {/* Filtro Departamento */}
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label><strong>Departamento</strong></Form.Label>
-            <Form.Select value={filtroDepto} onChange={e => setFiltroDepto(e.target.value)}>
-              <option value="todos">Todos</option>
-              {/* Rellena el select con los departamentos pasados por props */}
-              {departamentos.map(opcion => <option key={opcion} value={opcion}>{opcion}</option>)}
-            </Form.Select>
-          </Form.Group>
-        </Col>
+      <div className="h-px bg-slate-200 w-full" />
+
+      {/* SECCIÓN 2: FILTROS PERSONALIZADOS */}
+      <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-6">
+          <Funnel className="text-blue-500" size={14} />
+          <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Personalizar Reporte</h5>
+        </div>
         
-        {/* Filtro Turno */}
-        <Col md={3}>
-          <Form.Group>
-            <Form.Label><strong>Turno</strong></Form.Label>
-            <Form.Select value={filtroTurno} onChange={e => setFiltroTurno(e.target.value)}>
-              <option value="todos">Todos</option>
-              {/* Rellena el select con los turnos pasados por props */}
-              {turnos.map(opcion => <option key={opcion} value={opcion}>{opcion}</option>)}
-            </Form.Select>
-          </Form.Group>
-        </Col>
-        
-        {/* Filtro Estado */}
-        <Col md={3}>
-          <Form.Group>
-            <Form.Label><strong>Estado Asignación</strong></Form.Label>
-            <Form.Select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-              <option value="todos">Todas</option>
-              {/* Rellena el select con la constante local */}
-              {opcionesEstadoAsignacion.map(opcion => <option key={opcion.value} value={opcion.value}>{opcion.label}</option>)}
-            </Form.Select>
-          </Form.Group>
-        </Col>
-        
-        {/* Botón de Descarga Personalizada */}
-        <Col md={2}>
-          <Button 
-            variant="primary" 
-            className="w-100" // Ocupa el 100% del ancho de su columna
-            // Llama a handleDownload con los valores actuales de los estados
-            onClick={() => handleDownload(filtroDepto, filtroTurno, filtroEstado)}
-            // Deshabilitado si no se ha seleccionado ningún filtro (para evitar descargar todo)
-            disabled={filtroDepto === 'todos' && filtroTurno === 'todos' && filtroEstado === 'todos'}
-          >
-            Descargar
-          </Button>
-        </Col>
-      </Row>
-    </>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Zona</label>
+            <select 
+              value={filtroDepto} 
+              onChange={e => setFiltroDepto(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            >
+              <option value="todos">Toda la Provincia</option>
+              {departamentos.map(op => <option key={op} value={op}>{op}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Franja Horaria</label>
+            <select 
+              value={filtroTurno} 
+              onChange={e => setFiltroTurno(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            >
+              <option value="todos">Todos los Turnos</option>
+              {turnos.map(op => <option key={op} value={op}>{op}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
+            <select 
+              value={filtroEstado} 
+              onChange={e => setFiltroEstado(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            >
+              <option value="todos">Todas las Asignaciones</option>
+              {opcionesEstadoAsignacion.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => handleDownload(filtroDepto, filtroTurno, filtroEstado)}
+          disabled={filtroDepto === 'todos' && filtroTurno === 'todos' && filtroEstado === 'todos'}
+          className="w-full mt-6 bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-20 transition-all shadow-lg active:scale-[0.98]"
+        >
+          <FileEarmarkExcel size={18} className="text-emerald-400" />
+          Generar Documento Excel
+        </button>
+      </section>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-700 animate-in slide-in-from-top-2">
+          <ExclamationCircle size={16} />
+          <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
+        </div>
+      )}
+    </div>
   );
 }
 

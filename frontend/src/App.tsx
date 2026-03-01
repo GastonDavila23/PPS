@@ -1,186 +1,184 @@
 import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-
-// UI Components (React-Bootstrap)
-import Container from 'react-bootstrap/Container';
-import Modal from 'react-bootstrap/Modal';
-import Pagination from 'react-bootstrap/Pagination';
 import Spinner from 'react-bootstrap/Spinner';
-import Alert from 'react-bootstrap/Alert';
-
-// Custom Hooks & Components
+import { LayoutSidebarInset, LayoutSidebar } from 'react-bootstrap-icons';
 import { useAsignaciones } from './hooks/useAsignaciones';
-import FiltrosAsignaciones from './components/FiltrosAsignaciones';
 import TablaAsignaciones from './components/TablaAsignaciones';
 import AppHeader from './components/Header';
 import PanelAdmin from './components/PanelAdmin';
 import CargaPlanillasModal from './components/CargarPlanilla';
 import PanelDescargas from './components/PanelDescargas';
+import SidebarStats from './components/SidebarStats';
+import CustomModal from './components/CustomModal';
 
 function App() {
-  // 1. Auth0 Hook
-  const { isLoading: isAuthLoading, isAuthenticated, user } = useAuth0();
+  const { isLoading: isAuthLoading, isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
   
-  // 2. Custom Hook de Lógica de Negocio (Ahora usa Services y Types internamente)
-  const { 
-    rol, 
-    asignaciones, 
-    isDataLoading, 
-    dataError, 
-    paginacion, 
-    filtros, 
-    opciones 
+  const {
+    rol,
+    asignaciones,
+    isDataLoading,
+    paginacion,
+    filtros,
+    opciones
   } = useAsignaciones(isAuthenticated, user);
 
-  // 3. Estados locales de UI (Solo visibilidad de modales)
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
 
-  // Helper para reiniciar página al filtrar (UI Logic)
   const handleFilterChange = (setter: (v: string) => void, value: string) => {
     setter(value);
     paginacion.setCurrentPage(1);
   };
 
   const handlePageChange = (p: number) => {
-    // Protección simple para no pedir páginas inválidas
     if (p >= 1 && p <= paginacion.totalPages && !isDataLoading) {
       paginacion.setCurrentPage(p);
     }
   };
 
-  // --- RENDERIZADO DEL CONTENIDO PRINCIPAL ---
-  const renderContenido = () => {
-    // A. Cargando autenticación
-    if (isAuthLoading) {
-      return <div className="text-center mt-5"><Spinner animation="border" /></div>;
-    }
-    
-    // B. No autenticado
-    if (!isAuthenticated) {
-      return (
-        <Alert variant="info" className="mt-4 text-center">
-          <h2>Inicia sesión para ver los datos.</h2>
-        </Alert>
-      );
-    }
-    
-    // C. Cargando sistema (primera vez, sin datos previos)
-    if (isDataLoading && asignaciones.length === 0 && !dataError) {
-        return <div className="text-center mt-5"><Spinner animation="border" /><p>Cargando sistema...</p></div>;
-    }
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Spinner animation="grow" variant="primary" size="sm" />
+      </div>
+    );
+  }
 
-    // D. Renderizado según Rol
-    switch (rol) {
-      case 'admin':
-      case 'profesor':
-        // Error crítico
-        if (dataError && asignaciones.length === 0) {
-          return <Alert variant="danger" className="text-center mt-4">{dataError}</Alert>;
-        }
-
-        return (
-          <>
-            <div className="text-center mb-4">
-              <h2>Panel de Asignaciones</h2>
-              <p className="lead">Gestión de asignaciones geográficas.</p>
-            </div>
-
-            {/* Componente de Filtros (Ahora usa constantes globales) */}
-            <FiltrosAsignaciones 
-              filtros={filtros} 
-              opciones={opciones} 
-              onFilterChange={handleFilterChange} 
-            />
-
-            <div className="mb-2 text-muted">
-              Total: {paginacion.totalItems} resultados
-            </div>
-
-            {/* Tabla SPA (Sin saltos de pantalla) */}
-            {asignaciones.length > 0 ? (
-              <TablaAsignaciones 
-                asignaciones={asignaciones} 
-                isLoading={isDataLoading} 
-                limit={paginacion.ITEMS_PER_PAGE} 
-              />
-            ) : (
-               !isDataLoading && <Alert variant="secondary">No se encontraron resultados.</Alert>
-            )}
-          </>
-        );
-
-      case 'profesor-pendiente':
-        return <Alert variant="warning" className="text-center mt-4"><h2>Cuenta pendiente de aprobación.</h2></Alert>;
-      
-      default:
-        return <p className="text-center">Verificando permisos...</p>;
-    }
-  };
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-12 text-center border border-slate-200">
+          <h1 className="text-2xl font-black text-slate-800 mb-8 tracking-tighter uppercase">Asignador DGE</h1>
+          <button
+            onClick={() => loginWithRedirect()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95"
+          >
+            Entrar al Sistema
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <Container fluid className="mt-4 p-4">
-        {/* Header Global */}
-        <AppHeader 
-          rol={rol} 
-          onShowAdminPanel={() => setShowAdminModal(true)} 
-          onShowUploadPanel={() => setShowUploadModal(true)}
-          onShowDownloadPanel={() => setShowDownloadModal(true)}
-        />
-        
-        <main>
-          {renderContenido()}
-          
-          {/* Paginación */}
-          {(rol === 'admin' || rol === 'profesor') && paginacion.totalPages > 1 &&
-            <div className="d-flex justify-content-center mt-4">
-              <Pagination>
-                <Pagination.First 
-                  onClick={() => handlePageChange(1)} 
-                  disabled={paginacion.currentPage === 1 || isDataLoading} 
-                />
-                <Pagination.Prev 
-                  onClick={() => handlePageChange(paginacion.currentPage - 1)} 
-                  disabled={paginacion.currentPage === 1 || isDataLoading} 
-                />
-                
-                <Pagination.Item active>{paginacion.currentPage}</Pagination.Item>
-                
-                <Pagination.Next 
-                  onClick={() => handlePageChange(paginacion.currentPage + 1)} 
-                  disabled={paginacion.currentPage === paginacion.totalPages || isDataLoading} 
-                />
-                <Pagination.Last 
-                  onClick={() => handlePageChange(paginacion.totalPages)} 
-                  disabled={paginacion.currentPage === paginacion.totalPages || isDataLoading} 
-                />
-              </Pagination>
-            </div>
-          }
-        </main>
-      </Container>
-      
-      {/* --- Modales Globales --- */}
-      
-      <Modal show={showAdminModal} onHide={() => setShowAdminModal(false)} size="lg">
-        <Modal.Header closeButton><Modal.Title>Administración</Modal.Title></Modal.Header>
-        <Modal.Body><PanelAdmin /></Modal.Body>
-      </Modal>
-
-      <CargaPlanillasModal show={showUploadModal} onHide={() => setShowUploadModal(false)} />
-      
-      <Modal show={showDownloadModal} onHide={() => setShowDownloadModal(false)} size="lg">
-        <Modal.Header closeButton><Modal.Title>Descargar Excel</Modal.Title></Modal.Header>
-        <Modal.Body>
-          <PanelDescargas 
-            departamentos={opciones.departamentos} 
-            turnos={opciones.turnos} 
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans h-screen overflow-hidden">
+      <header className="bg-white border-b border-slate-200 z-50 shrink-0">
+        <div className="max-w-full mx-auto px-6">
+          <AppHeader
+            rol={rol}
+            onShowAdminPanel={() => setShowAdminModal(true)}
+            onShowUploadPanel={() => setShowUploadModal(true)}
+            onShowDownloadPanel={() => setShowDownloadModal(true)}
+            user={user}
+            logout={() => logout({ logoutParams: { returnTo: window.location.origin } })}
           />
-        </Modal.Body>
-      </Modal>
-    </>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden relative">
+        <aside
+          className={`transition-all duration-300 ease-in-out bg-white border-r border-slate-200 h-full overflow-hidden
+            ${showSidebar ? 'w-[320px] opacity-100' : 'w-0 opacity-0'}`}
+        >
+          <SidebarStats
+            totalItems={paginacion.totalItems}
+            userName={user?.nickname}
+            rol={rol}
+            filtros={filtros}
+            opciones={opciones}
+            onFilterChange={handleFilterChange}
+          />
+        </aside>
+
+        <main className="flex-1 flex flex-col h-screen bg-[#F8FAFC] overflow-hidden">
+          <div className="px-8 py-4 flex items-center justify-between shrink-0">
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-600 shadow-sm flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            >
+              {showSidebar ? <LayoutSidebarInset size={18} /> : <LayoutSidebar size={18} />}
+              {showSidebar ? 'Contraer Panel' : 'Expandir Panel'}
+            </button>
+
+            <div className="hidden md:block">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                Sistema de Gestión Territorial Docente <span className="text-slate-200 mx-2">|</span> <span className="text-blue-500">Mendoza</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 px-8 overflow-hidden flex flex-col">
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+              {isDataLoading && asignaciones.length === 0 ? (
+                <div className="flex items-center justify-center h-[480px]">
+                  <Spinner animation="border" variant="primary" size="sm" />
+                </div>
+              ) : (
+                <TablaAsignaciones
+                  asignaciones={asignaciones}
+                  isLoading={isDataLoading}
+                  limit={10}
+                />
+              )}
+            </div>
+
+            {paginacion.totalPages > 1 && (
+              <div className="py-6 flex justify-center items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(paginacion.currentPage - 1)}
+                  disabled={paginacion.currentPage === 1}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-blue-50 disabled:opacity-30 transition-all shadow-sm"
+                >
+                  Anterior
+                </button>
+
+                <div className="px-6 py-2 bg-blue-600 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-200 uppercase tracking-widest">
+                  Página {paginacion.currentPage} de {paginacion.totalPages}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(paginacion.currentPage + 1)}
+                  disabled={paginacion.currentPage === paginacion.totalPages}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-blue-50 disabled:opacity-30 transition-all shadow-sm"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+      
+      <CustomModal 
+        show={showUploadModal} 
+        onHide={() => setShowUploadModal(false)} 
+        title="Cargar Planillas de Datos"
+      >
+        <CargaPlanillasModal onHide={() => setShowUploadModal(false)} usuarioEmail={user?.email} />
+      </CustomModal>
+
+      <CustomModal 
+        show={showAdminModal} 
+        onHide={() => setShowAdminModal(false)} 
+        title="Administrar Usuarios"
+        width="w-[60vw]"
+      >
+        <PanelAdmin />
+      </CustomModal>
+
+      <CustomModal 
+        show={showDownloadModal} 
+        onHide={() => setShowDownloadModal(false)} 
+        title="Exportar Reportes"
+        width="w-[55vw]"
+      >
+        <PanelDescargas departamentos={opciones.departamentos} turnos={opciones.turnos} />
+      </CustomModal>
+
+    </div>
   );
 }
 

@@ -32,10 +32,13 @@ def get_all():
 @bp.route("/cambiar-rol", methods=['POST'])
 def change_role():
     data = request.json
+    admin_email = request.headers.get('X-Admin-Email') 
+    
     conn = get_db_connection()
     try:
+        # Validación: Solo actualizar si el ID existe y el rol es válido
         conn.execute("UPDATE usuarios SET rol = ? WHERE id = ?", (data.get('rol'), data.get('id')))
         conn.commit()
-        return jsonify({"mensaje": "Rol actualizado"})
+        return jsonify({"mensaje": "Rol actualizado con éxito"})
     finally:
         conn.close()

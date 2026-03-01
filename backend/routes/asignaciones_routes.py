@@ -46,34 +46,45 @@ def get_asignaciones():
 
 @bp.route('/cargar-planillas', methods=['POST'])
 def cargar():
+    usuario_email = request.form.get('usuario_email', 'sistema@dge.gob.ar')
+    
     if 'planillas' not in request.files: 
         return jsonify({"error": "No se subieron archivos"}), 400
     
     files = request.files.getlist('planillas')
     
     try:
-        # Procesamos sin depender de df_old para la primera carga
-        df_new = procesar_archivos_y_actualizar(files, pd.DataFrame())
+        df_new = procesar_archivos_y_actualizar(files)
         
         if df_new is None or df_new.empty:
-            return jsonify({"error": "El procesador devolvió un set de datos vacío. Verifique los CUE."}), 422
-        
+            return jsonify({"error": "No se pudo cruzar la información de los archivos."}), 422
+
         conn = get_db_connection()
-        # Aseguramos que la tabla se cree/reemplace correctamente
-        df_new.to_sql('escuelas_data', conn, if_exists='replace', index=False)
-        conn.close()
-        
-        # Ejecutamos la lógica de asignación
-        res = recalcular_y_guardar_asignaciones()
-        
-        if res.get('status') == 'error':
-            return jsonify({"error": res.get('message')}), 500
+        try:
+            df_new.to_sql('escuelas_data', conn, if_exists='replace', index=False)
             
-        return jsonify(res), 200
+            res = recalcular_y_guardar_asignaciones()
+            
+            conn.execute(
+                "INSERT INTO historial_cargas (usuario_email, registros_procesados, observaciones) VALUES (?, ?, ?)",
+                (usuario_email, len(df_new), res.get('message'))
+            )
+            conn.commit()
+            
+            return jsonify({
+                "status": "success",
+                "message": "Carga exitosa",
+                "detalle": {
+                    "total_escuelas": len(df_new),
+                    "asignaciones_info": res.get('message')
+                }
+            }), 200
+            
+        finally:
+            conn.close()
+            
     except Exception as e:
-        # Esto imprimirá el error real en tu consola de VS Code/Terminal
-        print(f"ERROR CRÍTICO: {str(e)}") 
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Error crítico: {str(e)}"}), 500
 
 @bp.route('/descargar-excel', methods=['GET'])
 def descargar():
@@ -92,3 +103,24 @@ def descargar():
     if df.empty: return jsonify({"error": "Sin datos"}), 404
     archivo = generar_excel_estilizado(df)
     return send_file(archivo, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='reporte_asignaciones.xlsx')
+
+@bp.route('/historial-cargas', methods=['GET'])
+def get_historial():
+    conn = get_db_connection()
+    try:
+        query = """
+            SELECT id, usuario_email, 
+            datetime(fecha) as fecha, 
+            registros_procesados, observaciones 
+            FROM historial_cargas 
+            ORDER BY id DESC LIMIT 10
+        """
+        data = conn.execute(query).fetchall()
+        
+        historial = [dict(row) for row in data]
+        return jsonify({"historial": historial}), 200
+    except Exception as e:
+        logger.error(f"Error obteniendo historial: {e}")
+        return jsonify({"error": "No se pudo obtener el historial"}), 500
+    finally:
+        conn.close()

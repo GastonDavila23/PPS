@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import logging
+import unicodedata
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,13 +24,28 @@ COLUMNAS_CONOCIDAS = {
     'Gestion': ['Gestion']
 }
 
+def normalizar_departamento(depto):
+    if pd.isna(depto): return "NO ESPECIFICADO"
+    texto = str(depto).strip().upper()
+    texto_sin_tildes = ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+    return texto_sin_tildes
+
+def normalizar_turno(turno):
+    if pd.isna(turno): return "Mañana" 
+    
+    t = str(turno).lower().strip()
+    
+    if 'tarde' in t or 'vespertino' in t or 'noche' in t:
+        return "Tarde"
+        
+    return "Mañana"
+
 def limpiar_valor_cue(val):
     if pd.isna(val): return None
     return str(val).strip().split('.')[0]
 
 def limpiar_numerico(serie):
     """Convierte a número de forma segura, tratando '-' y vacíos como NaN."""
-    # Reemplazamos guiones y espacios antes de convertir
     s = serie.astype(str).str.replace('-', '').str.strip()
     return pd.to_numeric(s, errors='coerce')
 
@@ -56,6 +72,7 @@ def extraer_datos_archivos(lista_de_archivos):
                 df = pd.concat(pd.read_excel(archivo, sheet_name=None).values(), ignore_index=True)
             
             df = normalizar_nombres_columnas(df)
+            
             if 'Latitud' in df.columns and 'Longitud' in df.columns:
                 coord_dfs.append(df)
             else:
@@ -66,24 +83,33 @@ def extraer_datos_archivos(lista_de_archivos):
 
 def procesar_archivos_y_actualizar(lista_de_archivos, df_existente=None):
     data_list, coord_list = extraer_datos_archivos(lista_de_archivos)
-    if not data_list or not coord_list:
-        logger.error("Faltan archivos de datos o de coordenadas.")
+
+    if not data_list and coord_list:
+        logger.info("Procesando archivo unificado (Datos y Coordenadas juntos).")
+        df_merged = pd.concat(coord_list, ignore_index=True)
+        if 'CUE' in df_merged.columns:
+            df_merged['CUE'] = df_merged['CUE'].apply(limpiar_valor_cue)
+        df_merged['Latitud'] = limpiar_numerico(df_merged['Latitud'])
+        df_merged['Longitud'] = limpiar_numerico(df_merged['Longitud'])
+
+    elif data_list and coord_list:
+        logger.info("Procesando archivos separados. Cruzando por CUE.")
+        df_data = pd.concat(data_list, ignore_index=True)
+        if 'CUE' in df_data.columns:
+            df_data['CUE'] = df_data['CUE'].apply(limpiar_valor_cue)
+        
+        df_coords = pd.concat(coord_list, ignore_index=True)
+        df_coords['CUE'] = df_coords['CUE'].apply(limpiar_valor_cue)
+        df_coords['Latitud'] = limpiar_numerico(df_coords['Latitud'])
+        df_coords['Longitud'] = limpiar_numerico(df_coords['Longitud'])
+        
+        df_lookup = df_coords.dropna(subset=['Latitud', 'Longitud']).drop_duplicates('CUE', keep='last')
+        df_merged = pd.merge(df_data, df_lookup[['CUE', 'Latitud', 'Longitud']], on='CUE', how='inner')
+    
+    else:
+        logger.error("No se detectaron coordenadas (Latitud/Longitud) en ninguno de los archivos.")
         return pd.DataFrame()
 
-    df_data = pd.concat(data_list, ignore_index=True)
-    if 'CUE' in df_data.columns:
-        df_data['CUE'] = df_data['CUE'].apply(limpiar_valor_cue)
-    
-    df_coords = pd.concat(coord_list, ignore_index=True)
-    df_coords['CUE'] = df_coords['CUE'].apply(limpiar_valor_cue)
-    
-    # Limpieza robusta de coordenadas
-    df_coords['Latitud'] = limpiar_numerico(df_coords['Latitud'])
-    df_coords['Longitud'] = limpiar_numerico(df_coords['Longitud'])
-    
-    df_lookup = df_coords.dropna(subset=['Latitud', 'Longitud']).drop_duplicates('CUE', keep='last')
-    df_merged = pd.merge(df_data, df_lookup[['CUE', 'Latitud', 'Longitud']], on='CUE', how='inner')
-    
     cols = ['ID_Escuela', 'CUE', 'Subcue', 'Numero_Escuela', 'Numero_Anexo', 'Nivel', 'Gestion', 
             'Nombre_Escuela', 'Departamento', 'Latitud', 'Longitud', 'Curso', 'Division', 'Turno', 'Matricula']
     
@@ -93,4 +119,10 @@ def procesar_archivos_y_actualizar(lista_de_archivos, df_existente=None):
     if 'Matricula' in df_merged.columns:
         df_merged['Matricula'] = limpiar_numerico(df_merged['Matricula']).fillna(0)
 
-    return df_merged[cols].fillna({'Matricula': 0, 'Subcue': 0, 'Nivel': 'Primario', 'Gestion': 'Pública'})
+    if 'Departamento' in df_merged.columns:
+        df_merged['Departamento'] = df_merged['Departamento'].apply(normalizar_departamento)
+        
+    if 'Turno' in df_merged.columns:
+        df_merged['Turno'] = df_merged['Turno'].apply(normalizar_turno)
+
+    return df_merged[cols].fillna({'Matricula': 0, 'Subcue': 0, 'Nivel': 'Primario', 'Gestion': 'Pública', 'Turno': 'Mañana'})

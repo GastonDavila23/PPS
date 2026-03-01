@@ -1,154 +1,185 @@
-/**
- * ================================================================================
- * ARCHIVO: PanelAdmin.tsx
- * ================================================================================
- * PROPÓSITO:
- * Este componente define el "Panel de Administración de Roles".
- *
- * Es una interfaz que se muestra dentro de un modal (ver App.tsx) y que solo
- * es accesible para usuarios con rol de 'admin'.
- *
- * MANEJA:
- * - La obtención (fetch) de la lista completa de usuarios desde el backend
- * (llamando a /api/usuarios).
- * - La visualización de todos los usuarios (email y rol) en una tabla.
- * - La funcionalidad para cambiar el rol de cualquier usuario mediante un
- * menú desplegable (select).
- * - La llamada al backend (POST a /api/usuarios/cambiar-rol) para persistir
- * el cambio de rol en la base de datos.
- * ================================================================================
- */
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { PersonBadge, ShieldLock, HourglassSplit, Person } from 'react-bootstrap-icons';
 
-// --- Importaciones ---
-import { useState, useEffect } from 'react'; // Hooks de React para estado y efectos secundarios.
-import axios from 'axios'; // Para realizar llamadas a la API del backend.
-// Componentes de React-Bootstrap para la UI
-import Table from 'react-bootstrap/Table';
-import Form from 'react-bootstrap/Form';
-
-/**
- * --- Definición de Tipos (Interface) ---
- * Define la estructura de un objeto 'User' tal como se recibe de la API.
- */
 interface User {
   id: number;
   email: string;
   rol: 'admin' | 'profesor' | 'profesor-pendiente';
 }
 
-/**
- * --- Definición del Componente ---
- * Este componente no recibe props, ya que es "inteligente" y busca
- * sus propios datos.
- */
+interface Historial {
+  id: number;
+  fecha: string;
+  usuario_email: string;
+  registros_procesados: number;
+  observaciones: string;
+}
+
 function PanelAdmin() {
-  
-  // --- Estados Internos ---
-  // Almacena la lista de todos los usuarios traídos de la BD.
   const [users, setUsers] = useState<User[]>([]);
-  // Controla el estado de carga inicial (true = muestra "Cargando...").
   const [loading, setLoading] = useState(true);
-  // Almacena un mensaje de error si la carga inicial falla.
   const [error, setError] = useState('');
 
-  // --- Funciones ---
-  
-  /**
-   * Función reutilizable para buscar (fetch) la lista de usuarios del backend.
-   */
+  const [historial, setHistorial] = useState<Historial[]>([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(true);
+
   const fetchUsers = () => {
     axios.get('http://127.0.0.1:5000/api/usuarios')
-      .then(response => {
-        // Si tiene éxito, guarda los usuarios en el estado.
-        setUsers(response.data);
-      })
-      .catch(() => {
-        // Si falla, guarda un mensaje de error.
-        setError('No se pudieron cargar los usuarios.');
-      })
-      .finally(() => {
-        // Se ejecuta siempre (éxito o error), y oculta el mensaje "Cargando...".
-        setLoading(false);
-      });
+      .then(response => setUsers(response.data))
+      .catch(() => setError('No se pudieron cargar los usuarios.'))
+      .finally(() => setLoading(false));
   };
 
-  /**
-   * Hook de Efecto (useEffect).
-   * Se ejecuta una sola vez (gracias al array vacío `[]`) cuando el
-   * componente se "monta" (es decir, cuando aparece en pantalla).
-   * Su único trabajo es llamar a `fetchUsers()` para cargar los datos iniciales.
-   */
+  const fetchHistorial = () => {
+    axios.get('http://127.0.0.1:5000/api/historial-cargas')
+      .then(response => setHistorial(response.data.historial || []))
+      .catch(() => console.error('No se pudo cargar el historial.'))
+      .finally(() => setLoadingHistorial(false));
+  };
+
   useEffect(() => {
     fetchUsers();
-  }, []); // El `[]` significa "ejecutar solo una vez".
+    fetchHistorial();
+  }, []);
 
-  /**
-   * Manejador de eventos que se activa cuando el admin cambia el valor
-   * del menú desplegable (Form.Select) de un usuario.
-   * @param {number} userId - El ID del usuario que se está modificando.
-   * @param {User['rol']} newRole - El nuevo rol seleccionado (ej: 'admin').
-   */
   const handleRoleChange = (userId: number, newRole: User['rol']) => {
-    // 1. Llamada optimista a la API:
-    // Envía la solicitud de cambio de rol al backend.
     axios.post('http://127.0.0.1:5000/api/usuarios/cambiar-rol', { id: userId, rol: newRole })
       .then(() => {
-        // 2. Actualización Optimista del Estado (UI):
-        // Si la llamada al backend tiene éxito, actualiza la UI local (el estado 'users')
-        // inmediatamente, sin necesidad de volver a hacer un fetch de toda la lista.
-        // Esto hace que la UI se sienta instantánea.
         setUsers(users.map(u => u.id === userId ? { ...u, rol: newRole } : u));
       })
-      .catch(() => {
-        // 3. Manejo de Error:
-        // Si la API falla, muestra una alerta simple.
-        // (En una app más robusta, aquí se podría revertir el cambio optimista).
-        alert('Error al cambiar el rol.');
-      });
+      .catch(() => alert('Error al cambiar el rol.'));
   };
 
-  // --- Renderizado Condicional (Feedback de Carga) ---
-  if (loading) return <p>Cargando usuarios...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return (
+    <div className="p-12 text-center">
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Sincronizando sistema...</p>
+    </div>
+  );
 
-  // --- Renderizado Principal (UI) ---
+  if (error) return (
+    <div className="p-10 text-center bg-red-50 rounded-2xl border border-red-100">
+      <p className="text-red-500 font-black text-xs uppercase tracking-widest">{error}</p>
+    </div>
+  );
+
   return (
-    <div className="mt-5 p-4 border rounded">
-      <h2>Panel de Administración de Roles</h2>
-      <Table striped bordered hover responsive>
-        <thead className='text-center table-dark'>
-          <tr>
-            <th>Email del Usuario</th>
-            <th>Rol Actual</th>
-            <th>Asignar Nuevo Rol</th>
-          </tr>
-        </thead>
-        <tbody className='text-center'>
-          {/* Itera (hace un 'map') sobre la lista de usuarios en el estado */}
-          {users.map(user => (
-            <tr key={user.id}>
-              {/* 'align-middle' centra verticalmente el texto en la celda */}
-              <td className="align-middle">{user.email}</td>
-              <td className="align-middle">{user.rol}</td>
-              <td>
-                {/* Este es el menú desplegable (Select) para cambiar el rol.
-                  - 'value={user.rol}' asegura que muestre el rol actual.
-                  - 'onChange' activa la función 'handleRoleChange' cuando se selecciona
-                    una nueva opción.
-                */}
-                <Form.Select
-                  value={user.rol}
-                  onChange={(e) => handleRoleChange(user.id, e.target.value as User['rol'])}
-                >
-                  <option value="profesor-pendiente">Pendiente</option>
-                  <option value="profesor">Profesor</option>
-                  <option value="admin">Administrador</option>
-                </Form.Select>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+    <div className="flex flex-col gap-6">
+      
+      {/* SECCIÓN 1: GESTIÓN DE USUARIOS */}
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">
+          Gestione los niveles de acceso para el personal docente y administrativo.
+        </p>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+            <table className="w-full border-collapse table-fixed">
+              <thead className="sticky top-0 z-20">
+                <tr className="bg-slate-800 text-white">
+                  <th className="w-3/5 py-3 px-6 text-[10px] font-black uppercase tracking-[0.25em] text-left border-r border-slate-700">Identificador</th>
+                  <th className="w-2/5 py-3 px-6 text-[10px] font-black uppercase tracking-[0.25em] text-center">Rol Asignado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user, i) => (
+                  <tr 
+                    key={user.id} 
+                    className={`border-b border-slate-200 h-[50px] transition-colors
+                      ${i % 2 === 0 ? 'bg-[#FAF9F6]' : 'bg-[#E5E7EB]'}`}
+                  >
+                    <td className="px-6 py-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 shadow-sm shrink-0">
+                          <Person size={14} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-700 truncate">{user.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-2">
+                      <div className="relative group max-w-[160px] mx-auto">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-colors group-focus-within:text-blue-500">
+                          {user.rol === 'admin' && <ShieldLock size={12} />}
+                          {user.rol === 'profesor' && <PersonBadge size={12} />}
+                          {user.rol === 'profesor-pendiente' && <HourglassSplit size={12} />}
+                        </div>
+                        <select
+                          value={user.rol}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value as User['rol'])}
+                          className="w-full pl-9 pr-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer appearance-none"
+                        >
+                          <option value="profesor-pendiente">Pendiente</option>
+                          <option value="profesor">Profesor</option>
+                          <option value="admin">Administrador</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 2: HISTORIAL DE CARGAS (AUDITORÍA) */}
+      <div className="border-t border-slate-200 pt-5 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
+            Auditoría de Cargas
+          </h4>
+          <span className="bg-blue-100 text-blue-800 text-[9px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">
+            Últimos movimientos
+          </span>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {loadingHistorial ? (
+            <div className="p-6 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest animate-pulse">
+              Cargando registros...
+            </div>
+          ) : historial.length === 0 ? (
+            <div className="p-6 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
+              No hay cargas registradas en el sistema.
+            </div>
+          ) : (
+            <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
+              <table className="w-full border-collapse table-fixed">
+                <thead className="sticky top-0 z-20">
+                  <tr className="bg-slate-100 border-b border-slate-200">
+                    <th className="w-[30%] py-2 px-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-left border-r border-slate-200">Fecha</th>
+                    <th className="w-[50%] py-2 px-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-left border-r border-slate-200">Usuario</th>
+                    <th className="w-[20%] py-2 px-4 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Escuelas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.map((item, i) => (
+                    <tr 
+                      key={item.id} 
+                      className={`border-b border-slate-100 h-[40px]
+                        ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}
+                    >
+                      <td className="px-4 py-2 font-mono text-[10px] text-slate-500 truncate">
+                        {item.fecha}
+                      </td>
+                      <td className="px-4 py-2 font-bold text-[11px] text-slate-700 truncate">
+                        {item.usuario_email}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded font-mono text-[10px] font-bold shadow-sm">
+                          {item.registros_procesados}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
