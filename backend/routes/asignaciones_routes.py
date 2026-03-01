@@ -10,8 +10,20 @@ from services.reportes_service import generar_excel_estilizado
 bp = Blueprint('asignaciones', __name__)
 logger = logging.getLogger(__name__)
 
+def verificar_rol_admin(email):
+    """Función auxiliar para validar si un email tiene rango de administrador."""
+    if not email:
+        return False
+    conn = get_db_connection()
+    try:
+        user = conn.execute('SELECT rol FROM usuarios WHERE email = ?', (email,)).fetchone()
+        return user is not None and user['rol'] == 'admin'
+    finally:
+        conn.close()
+
 @bp.route("/asignaciones", methods=['GET'])
 def get_asignaciones():
+    # Esta ruta es de consulta, permitida para Admin y Profesores (ya filtrado en el front)
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 15, type=int)
     offset = (page - 1) * limit
@@ -46,7 +58,12 @@ def get_asignaciones():
 
 @bp.route('/cargar-planillas', methods=['POST'])
 def cargar():
-    usuario_email = request.form.get('usuario_email', 'sistema@dge.gob.ar')
+    usuario_email = request.form.get('usuario_email')
+    
+    # --- BLOQUEO DE SEGURIDAD ---
+    if not verificar_rol_admin(usuario_email):
+        logger.warning(f"Intento de carga no autorizado por parte de: {usuario_email}")
+        return jsonify({"error": "Acceso denegado. Se requieren permisos de administrador."}), 403
     
     if 'planillas' not in request.files: 
         return jsonify({"error": "No se subieron archivos"}), 400
@@ -62,7 +79,6 @@ def cargar():
         conn = get_db_connection()
         try:
             df_new.to_sql('escuelas_data', conn, if_exists='replace', index=False)
-            
             res = recalcular_y_guardar_asignaciones()
             
             conn.execute(
@@ -79,15 +95,21 @@ def cargar():
                     "asignaciones_info": res.get('message')
                 }
             }), 200
-            
         finally:
             conn.close()
             
     except Exception as e:
+        logger.error(f"Error crítico en carga: {str(e)}")
         return jsonify({"error": f"Error crítico: {str(e)}"}), 500
 
 @bp.route('/descargar-excel', methods=['GET'])
 def descargar():
+    # Para descargar reportes también validamos que sea admin
+    usuario_email = request.args.get('email')
+    
+    if not verificar_rol_admin(usuario_email):
+        return jsonify({"error": "No tienes permiso para descargar reportes."}), 403
+
     filtros = {
         'departamento': request.args.get('departamento'),
         'turno': request.args.get('turno'),
@@ -106,6 +128,12 @@ def descargar():
 
 @bp.route('/historial-cargas', methods=['GET'])
 def get_historial():
+    # El historial de auditoría solo debería verlo el administrador
+    usuario_email = request.args.get('email')
+    
+    if not verificar_rol_admin(usuario_email):
+        return jsonify({"error": "Acceso denegado."}), 403
+
     conn = get_db_connection()
     try:
         query = """

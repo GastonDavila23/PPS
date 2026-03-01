@@ -5,6 +5,7 @@ import { CloudDownload, FileEarmarkExcel, Funnel, LightningCharge, ExclamationCi
 interface PanelDescargasProps {
   departamentos: string[];
   turnos: string[];
+  usuarioEmail?: string; // <-- Nueva prop para seguridad
 }
 
 const opcionesEstadoAsignacion = [
@@ -14,7 +15,7 @@ const opcionesEstadoAsignacion = [
   { value: 'no-asignadas', label: 'No Asignadas', color: 'text-rose-600', bg: 'bg-rose-50' },
 ];
 
-function PanelDescargas({ departamentos, turnos }: PanelDescargasProps) {
+function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasProps) {
   const [filtroDepto, setFiltroDepto] = useState('todos');
   const [filtroTurno, setFiltroTurno] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
@@ -24,6 +25,10 @@ function PanelDescargas({ departamentos, turnos }: PanelDescargasProps) {
     setError('');
     let url = 'http://127.0.0.1:5000/api/descargar-excel?';
     const params = new URLSearchParams();
+    
+    // BLINDAJE: Enviamos el email para que el backend nos autorice la descarga
+    if (usuarioEmail) params.append('email', usuarioEmail);
+    
     if (depto !== 'todos') params.append('departamento', depto);
     if (turno !== 'todos') params.append('turno', turno);
     if (estado !== 'todos') params.append('estado_asignacion', estado);
@@ -40,13 +45,11 @@ function PanelDescargas({ departamentos, turnos }: PanelDescargasProps) {
         link.click();
         link.remove();
       })
-      .catch(() => setError('No se encontraron datos con los filtros seleccionados.'));
+      .catch(() => setError('No tienes permisos o no se encontraron datos para estos filtros.'));
   };
 
   return (
     <div className="flex flex-col gap-6">
-      
-      {/* SECCIÓN 1: DESCARGAS RÁPIDAS */}
       <section>
         <div className="flex items-center gap-2 mb-4">
           <LightningCharge className="text-amber-500" size={14} />
@@ -71,7 +74,6 @@ function PanelDescargas({ departamentos, turnos }: PanelDescargasProps) {
 
       <div className="h-px bg-slate-200 w-full" />
 
-      {/* SECCIÓN 2: FILTROS PERSONALIZADOS */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 mb-6">
           <Funnel className="text-blue-500" size={14} />

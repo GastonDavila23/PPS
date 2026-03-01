@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import Spinner from 'react-bootstrap/Spinner';
-import { LayoutSidebarInset, LayoutSidebar } from 'react-bootstrap-icons';
+import { 
+  LayoutSidebarInset, 
+  LayoutSidebar, 
+  HourglassSplit // <-- Importamos el ícono de espera
+} from 'react-bootstrap-icons';
 import { useAsignaciones } from './hooks/useAsignaciones';
 import TablaAsignaciones from './components/TablaAsignaciones';
 import AppHeader from './components/Header';
@@ -63,6 +67,31 @@ function App() {
     );
   }
 
+  // --- BLOQUEO DE SEGURIDAD PARA ROLES PENDIENTES ---
+  if (rol === 'profesor-pendiente') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
+        <div className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl p-12 text-center border border-orange-100 animate-in fade-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+            <HourglassSplit size={40} />
+          </div>
+          <h1 className="text-xl font-black text-slate-800 mb-4 uppercase tracking-tighter">Acceso Pendiente</h1>
+          <p className="text-sm text-slate-500 mb-10 leading-relaxed font-medium">
+            Tu cuenta ha sido registrada correctamente en el sistema de la <span className="text-blue-600 font-bold">DGE</span>. 
+            Por seguridad, un administrador debe aprobar tu nivel de acceso antes de habilitar las consultas.
+          </p>
+          <button
+            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+            className="w-full bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] py-5 rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no está pendiente, muestra el sistema completo
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans h-screen overflow-hidden">
       <header className="bg-white border-b border-slate-200 z-50 shrink-0">
@@ -166,7 +195,7 @@ function App() {
         title="Administrar Usuarios"
         width="w-[60vw]"
       >
-        <PanelAdmin />
+        <PanelAdmin usuarioEmail={user?.email} />
       </CustomModal>
 
       <CustomModal 

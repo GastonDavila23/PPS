@@ -28,33 +28,33 @@ const AppHeader = ({ rol, onShowAdminPanel, onShowUploadPanel, onShowDownloadPan
         </div>
       </div>
 
-      {/* SECCIÓN CENTRAL */}
+      {/* SECCIÓN CENTRAL: DINÁMICA POR ROL */}
       <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
-
-        {/* BOTÓN CARGAR */}
-        <button
-          onClick={onShowUploadPanel}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all"
-        >
-          <CloudArrowUp size={16} />
-          <span>Importar</span>
-        </button>
-
-        <div className="w-px h-6 bg-slate-300 mx-1"></div>
-
-        {/* BOTÓN REPORTES */}
-        <button
-          onClick={onShowDownloadPanel}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all"
-        >
-          <FileEarmarkArrowDown size={16} />
-          <span>Reportes</span>
-        </button>
-
-        {rol === 'admin' && (
+        {rol === 'admin' ? (
           <>
+            {/* BOTÓN CARGAR (Solo Admin) */}
+            <button
+              onClick={onShowUploadPanel}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all"
+            >
+              <CloudArrowUp size={16} />
+              <span>Importar</span>
+            </button>
+
             <div className="w-px h-6 bg-slate-300 mx-1"></div>
-            {/* BOTÓN ADMIN */}
+
+            {/* BOTÓN REPORTES (Solo Admin) */}
+            <button
+              onClick={onShowDownloadPanel}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all"
+            >
+              <FileEarmarkArrowDown size={16} />
+              <span>Reportes</span>
+            </button>
+
+            <div className="w-px h-6 bg-slate-300 mx-1"></div>
+
+            {/* BOTÓN USUARIOS (Solo Admin) */}
             <button
               onClick={onShowAdminPanel}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
@@ -63,6 +63,11 @@ const AppHeader = ({ rol, onShowAdminPanel, onShowUploadPanel, onShowDownloadPan
               <span>Usuarios</span>
             </button>
           </>
+        ) : (
+          /* VISTA PARA PROFESORES (Lectura) */
+          <div className="px-8 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">
+            Panel de Consulta de Profesores
+          </div>
         )}
       </div>
 

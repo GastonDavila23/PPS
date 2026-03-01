@@ -16,7 +16,11 @@ interface Historial {
   observaciones: string;
 }
 
-function PanelAdmin() {
+interface PanelAdminProps {
+  usuarioEmail?: string; // Prop necesaria para validar permisos en el backend
+}
+
+function PanelAdmin({ usuarioEmail }: PanelAdminProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,6 +28,7 @@ function PanelAdmin() {
   const [historial, setHistorial] = useState<Historial[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(true);
 
+  // Carga la lista de usuarios del sistema
   const fetchUsers = () => {
     axios.get('http://127.0.0.1:5000/api/usuarios')
       .then(response => setUsers(response.data))
@@ -31,24 +36,41 @@ function PanelAdmin() {
       .finally(() => setLoading(false));
   };
 
+  // Carga el historial de auditoría de archivos
   const fetchHistorial = () => {
-    axios.get('http://127.0.0.1:5000/api/historial-cargas')
-      .then(response => setHistorial(response.data.historial || []))
-      .catch(() => console.error('No se pudo cargar el historial.'))
+    // Si el email aún no llega de Auth0, no disparamos la petición para evitar el 403
+    if (!usuarioEmail) return;
+
+    setLoadingHistorial(true);
+    axios.get(`http://127.0.0.1:5000/api/historial-cargas?email=${usuarioEmail}`)
+      .then(response => {
+        setHistorial(response.data.historial || []);
+      })
+      .catch((err) => {
+        console.error('Error de auditoría:', err.response?.status);
+        setLoadingHistorial(false);
+      })
       .finally(() => setLoadingHistorial(false));
   };
 
   useEffect(() => {
     fetchUsers();
-    fetchHistorial();
-  }, []);
+    // Solo intentamos traer el historial si el email del usuario está disponible
+    if (usuarioEmail) {
+      fetchHistorial();
+    }
+  }, [usuarioEmail]); // Se dispara de nuevo automáticamente cuando Auth0 entrega el email
 
   const handleRoleChange = (userId: number, newRole: User['rol']) => {
-    axios.post('http://127.0.0.1:5000/api/usuarios/cambiar-rol', { id: userId, rol: newRole })
-      .then(() => {
-        setUsers(users.map(u => u.id === userId ? { ...u, rol: newRole } : u));
-      })
-      .catch(() => alert('Error al cambiar el rol.'));
+    // Enviamos el email del administrador en los headers para que el backend valide la acción
+    axios.post('http://127.0.0.1:5000/api/usuarios/cambiar-rol', 
+      { id: userId, rol: newRole },
+      { headers: { 'X-Admin-Email': usuarioEmail } }
+    )
+    .then(() => {
+      setUsers(users.map(u => u.id === userId ? { ...u, rol: newRole } : u));
+    })
+    .catch(() => alert('Error: No tienes permisos suficientes para cambiar roles.'));
   };
 
   if (loading) return (
@@ -123,7 +145,7 @@ function PanelAdmin() {
         </div>
       </div>
 
-      {/* SECCIÓN 2: HISTORIAL DE CARGAS (AUDITORÍA) */}
+      {/* SECCIÓN 2: AUDITORÍA DE CARGAS */}
       <div className="border-t border-slate-200 pt-5 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
@@ -141,7 +163,7 @@ function PanelAdmin() {
             </div>
           ) : historial.length === 0 ? (
             <div className="p-6 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
-              No hay cargas registradas en el sistema.
+              No tienes permisos o no hay cargas registradas.
             </div>
           ) : (
             <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
@@ -179,7 +201,6 @@ function PanelAdmin() {
           )}
         </div>
       </div>
-
     </div>
   );
 }
