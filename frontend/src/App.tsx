@@ -4,7 +4,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import { 
   LayoutSidebarInset, 
   LayoutSidebar, 
-  HourglassSplit // <-- Importamos el ícono de espera
+  HourglassSplit
 } from 'react-bootstrap-icons';
 import { useAsignaciones } from './hooks/useAsignaciones';
 import TablaAsignaciones from './components/TablaAsignaciones';
@@ -91,7 +91,6 @@ function App() {
     );
   }
 
-  // Si no está pendiente, muestra el sistema completo
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans h-screen overflow-hidden">
       <header className="bg-white border-b border-slate-200 z-50 shrink-0">

@@ -89,13 +89,18 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
     ```bash
     pip install -r requirements.txt
     ```
-
 5.  Crea el admin 
+    ```bash
+    py crear_db.py
+    ```
+
+6.  Crea el admin 
     ```bash
     py crear_admin.py
     ```
+    > **Nota:** Agregar el correo a utilizar como admin
 
-6.  Inicia el servidor del backend
+7.  Inicia el servidor del backend
     ```bash
     py app.py
     ```
@@ -126,41 +131,22 @@ Este proyecto requiere una cuenta de Auth0 para funcionar.
     * Dale un "Identifier" (ej: `https://api-asignador-escuelas/`). Este es tu `Audience`.
 4.  En la configuración de tu **Aplicación (SPA)**:
     * Añade `http://localhost:5173` a las "Allowed Callback URLs", "Allowed Logout URLs" y "Allowed Web Origins".
-5.  En `frontend/src/main.tsx`:
-    * Reemplaza `domain` y `clientId` con los de tu aplicación Auth0.
-    * Asegúrate que `audience` coincida con el "Identifier" de tu API de Auth0.
+5.  Crea el archivo `.env.local` en `frontend/`:
+    ```bash
+    VITE_AUTH0_DOMAIN=el-dominio-que-te-de-auth0
+    VITE_AUTH0_CLIENT_ID=el-client-id-que-te-de-auth0
+    ```
+    > **Nota:** Reemplaza las variables Domain y Client que te brinda la app de Auth0.
 
 ### 5. Automatización para el Usuario (Archivo .bat)
 Para facilitar la ejecución diaria sin abrir terminales manualmente, el proyecto incluye un script de automatización:
 
-1. Ubica el archivo `iniciar-proyecto.bat` en la raíz de la carpeta `PPS`.
+1. Al archivo `iniciar-proyecto.bat` ubicado en la raíz de la carpeta `PPS`.
 2. Hazle clic derecho y selecciona **"Enviar a > Escritorio (crear acceso directo)"**.
-3. (Opcional) Cambia el icono del acceso directo usando el archivo `logo.ico` ubicado en `frontend/public`.
+3. (Opcional) Cambiar el icono del acceso directo.
 
 > **Nota:** Al ejecutar este archivo, se levantarán automáticamente el backend (Flask), el frontend (Vite) y se abrirá el navegador en la dirección del proyecto.
 
-
----
-
-## Modo de Uso (Flujo de Admin)
-
-1.  **Iniciar Sesión:** Ve a `http://localhost:5173`. Inicia sesión con el email que configuraste como admin.
-2.  **Aprobar tu cuenta:** Al ser tu primer login, serás "profesor-pendiente". El sistema aún no te mostrará nada.
-    * Ve a la terminal del backend y ejecuta `py crear_admin.py` de nuevo para forzar tu rol a "admin".
-    * Refresca la página.
-3.  **Cargar Planillas:**
-    * Haz clic en "Cargar Planillas".
-    * Selecciona los archivos Excel o CSV que contienen los datos de las escuelas (uno con CUE/Turno, otro con CUE/Lat/Lon).
-    * Haz clic en "Procesar y Cargar". El sistema procesará los datos y recargará la página.
-4.  **Analizar Datos:** Los resultados de la asignación geográfica aparecerán en la tabla.
-    * Usa los filtros (Departamento, Turno, Estado, Nombre) para analizar los resultados.
-    * Las filas tendrán colores (Verde, Azul, Amarillo, Rojo) según la distancia de asignación.
-5.  **Gestionar Roles:**
-    * Haz clic en "Admin Roles".
-    * En el modal, podrás ver a todos los usuarios que se han registrado y cambiar su rol (ej: aprobar a un 'profesor-pendiente' a 'profesor').
-6.  **Descargar Reportes:**
-    * Haz clic en "Descargar Reporte".
-    * Usa los botones de "Descarga Rápida" o los filtros personalizados para generar un archivo `.xlsx` con formato profesional.
 
 ---
 
