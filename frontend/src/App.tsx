@@ -203,7 +203,7 @@ function App() {
         title="Exportar Reportes"
         width="w-[55vw]"
       >
-        <PanelDescargas departamentos={opciones.departamentos} turnos={opciones.turnos} />
+        <PanelDescargas departamentos={opciones.departamentos} turnos={opciones.turnos} usuarioEmail={user?.email}/>
       </CustomModal>
 
     </div>

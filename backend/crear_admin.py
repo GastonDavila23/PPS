@@ -1,47 +1,56 @@
 import sqlite3
+import sys
 
-print("\n=== ASIGNACIÓN DE ROL DE ADMINISTRADOR ===")
-print("Instrucciones: Ingrese el email con el que se registró en el sistema.")
-ADMIN_EMAIL = input("Email del supervisor: ").strip()
+def configurar_admin():
+    print("\n" + "="*60)
+    print("        SISTEMA DGE - CONFIGURACIÓN DE ADMINISTRADOR")
+    print("="*60)
+    print("\nInstrucciones: Ingrese el email exacto con el que el supervisor")
+    print("se registrará en el sistema (el mismo de su cuenta de Auth0).")
 
-DB_FILE = 'asignador.db'
+    email_admin = input("\n➤ Email del supervisor: ").strip()
 
-if not ADMIN_EMAIL:
-    print("Error: No ingresaste ningún email. El programa se cerrará.")
-    exit()
+    if not email_admin:
+        print("\n[ERROR] No ingresaste ningún email. El proceso se canceló.")
+        return 
 
-print(f"\nIntentando hacer ADMIN a: '{ADMIN_EMAIL}' en la base de datos...")
+    db_file = 'asignador.db'
 
-try:
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        INSERT OR IGNORE INTO usuarios (email, password_hash, rol) 
-        VALUES (?, ?, 'admin')
-    ''', (ADMIN_EMAIL, 'auth0'))
+        cursor.execute('''
+            INSERT OR IGNORE INTO usuarios (email, password_hash, rol) 
+            VALUES (?, ?, 'admin')
+        ''', (email_admin, 'auth0'))
 
-    cursor.execute('''
-        UPDATE usuarios SET rol = 'admin' WHERE email = ?
-    ''', (ADMIN_EMAIL,))
+        cursor.execute('''
+            UPDATE usuarios SET rol = 'admin' WHERE email = ?
+        ''', (email_admin,))
 
-    conn.commit()
-    
-    cursor.execute("SELECT * FROM usuarios WHERE email=?", (ADMIN_EMAIL,))
-    user = cursor.fetchone()
+        conn.commit()
+        
+        cursor.execute("SELECT email, rol FROM usuarios WHERE email=?", (email_admin,))
+        user = cursor.fetchone()
 
-    print("\n" + "="*40)
-    print(" ¡ÉXITO! USUARIO ACTUALIZADO")
-    print("="*40)
-    print(f"  - ID: {user[0]}")
-    print(f"  - Email: {user[1]}")
-    print(f"  - Rol Actual: {user[2]}")
-    print("="*40)
-    print("Ya puedes iniciar sesión en el sistema con privilegios completos.\n")
+        if user:
+            print("\n" + "✅" + "-"*58)
+            print(" ¡CONFIGURACIÓN COMPLETADA CON ÉXITO!")
+            print("-"*60)
+            print(f"  Usuario: {user[0]}")
+            print(f"  Nivel de Acceso: {user[1].upper()}")
+            print("-"*60)
+            print("El supervisor ya puede entrar al sistema con control total.\n")
+        else:
+            print("\n[!] Error: El usuario se creó pero no se pudo verificar.")
 
-except sqlite3.Error as e:
-    print(f"\n[ERROR] Ocurrió un problema con la base de datos: {e}")
-finally:
-    if conn:
-        conn.close()
-    input("Presiona ENTER para salir...")
+    except sqlite3.Error as e:
+        print(f"\n❌ [ERROR DE BASE DE DATOS]: {e}")
+        print("Asegúrese de que 'crear_db.py' se haya ejecutado antes.")
+    finally:
+        if conn:
+            conn.close()
+
+if __name__ == "__main__":
+    configurar_admin()

@@ -1,0 +1,72 @@
+======================================================================
+     SISTEMA DE ASIGNACIÓN GEOGRÁFICA DOCENTE - DGE MENDOZA
+======================================================================
+Este documento contiene las instrucciones para instalar y ejecutar el 
+sistema por primera vez en esta computadora.
+
+----------------------------------------------------------------------
+PASO 1: INSTALACIÓN DE SOFTWARE BASE (Solo una vez)
+----------------------------------------------------------------------
+
+1. INSTALAR PYTHON (Motor de datos):
+   - Descarga: https://www.python.org/downloads/
+   - IMPORTANTE: Al instalar, DEBES marcar la casilla que dice 
+     "Add Python to PATH" antes de darle a "Install Now".
+
+2. INSTALAR NODE.JS (Interfaz de usuario):
+   - Descarga: https://nodejs.org/ (Elegir la versión "LTS")
+   - Instalar siguiendo los pasos predeterminados ("Next" a todo).
+
+----------------------------------------------------------------------
+PASO 2: CONFIGURACIÓN DE SEGURIDAD (Auth0)
+----------------------------------------------------------------------
+
+Para que el inicio de sesión funcione, un técnico debe:
+1. Crear una cuenta en https://auth0.com/
+2. Crear una "Single Page Application" llamada "Asignador DGE".
+3. En la configuración, agregar http://localhost:5173 en:
+   - Allowed Callback URLs
+   - Allowed Logout URLs
+   - Allowed Web Origins
+4. Crear una "API" con el identificador: https://api-asignador-escuelas/
+5. Crear el archivo de conexión (Ver PASO 3).
+
+----------------------------------------------------------------------
+PASO 3: ARCHIVO DE CREDENCIALES
+----------------------------------------------------------------------
+
+Dentro de la carpeta "frontend", crear un archivo de texto llamado:
+.env.local
+
+Pegar lo siguiente con los datos de la cuenta creada en el paso 2:
+VITE_AUTH0_DOMAIN=tu-dominio.auth0.com
+VITE_AUTH0_CLIENT_ID=tu-codigo-de-cliente
+
+----------------------------------------------------------------------
+PASO 4: INSTALACIÓN INICIAL (Doble Clic)
+----------------------------------------------------------------------
+
+Ejecutar el archivo: setup-proyecto.bat
+
+- Este proceso descargará las librerías necesarias.
+- Se abrirá una ventana negra pidiéndote el EMAIL DEL SUPERVISOR.
+- Escribe el email que usarás para entrar al sistema y presiona ENTER.
+- Espera a que la ventana diga "INSTALACIÓN FINALIZADA".
+
+----------------------------------------------------------------------
+PASO 5: USO DIARIO
+----------------------------------------------------------------------
+
+Para abrir el programa cada día, simplemente haz doble clic en:
+iniciar-proyecto.bat
+
+- Se abrirán dos ventanas negras (no las cierres).
+- El sistema se abrirá automáticamente en tu navegador.
+
+----------------------------------------------------------------------
+CONTACTO Y SOPORTE
+----------------------------------------------------------------------
+Desarrollado por: Gastón Dávila
+Contacto: 2616948318
+Correo: gastonn520@gmail.com
+======================================================================
