@@ -1,5 +1,29 @@
-# Ignorar dependencias de Node (Frontend)
+# === DEPENDENCIAS Y ENTORNOS ===
 frontend/node_modules/
-
-# Ignorar entorno virtual de Python (Backend)
 backend/venv/
+.env
+.env.local
+.env.production.local
+
+# === BASE DE DATOS LOCAL ===
+backend/asignador.db
+backend/*.db
+
+# === PYTHON (Bytecode y Caché) ===
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# === FRONTEND (Builds y Herramientas) ===
+frontend/dist/
+frontend/build/
+.eslintcache
+
+# === EDITORES Y SISTEMA ===
+.vscode/
+.idea/
+*.log
+Thumbs.db
+desktop.ini
+.DS_Store
