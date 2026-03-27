@@ -1,9 +1,7 @@
 // src/types/index.ts
 
-// Tipo para el Rol del Usuario
 export type RolUsuario = 'admin' | 'profesor' | 'profesor-pendiente';
 
-// Interfaz que representa una fila de la tabla (igual a tu IAsignacionFlat anterior)
 export interface IAsignacion {
   origen_Departamento: string;
   origen_CUE: string;
@@ -12,7 +10,6 @@ export interface IAsignacion {
   origen_Nombre_Escuela: string;
   origen_Division: string;
   origen_Turno: string;
-  
   destino_Departamento: string;
   destino_CUE: string;
   destino_Numero_Escuela: string;
@@ -20,12 +17,10 @@ export interface IAsignacion {
   destino_Nombre_Escuela: string;
   destino_Division: string;
   destino_Turno: string;
-  
   Distancia_KM: number;
   Observaciones: string;
 }
 
-// Tipos para los parámetros de búsqueda del servicio
 export interface AsignacionesParams {
   page: number;
   limit: number;
@@ -35,7 +30,6 @@ export interface AsignacionesParams {
   nombre_escuela?: string;
 }
 
-// Respuesta esperada de la API de asignaciones
 export interface AsignacionesResponse {
   asignaciones: IAsignacion[];
   totalItems: number;
@@ -43,4 +37,11 @@ export interface AsignacionesResponse {
   currentPage: number;
   allDepartamentos: string[];
   allTurnos: string[];
+}
+
+// Nueva interfaz para usuarios en el front
+export interface IUser {
+  id: number;
+  email: string;
+  rol: RolUsuario;
 }

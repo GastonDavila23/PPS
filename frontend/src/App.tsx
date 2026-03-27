@@ -14,6 +14,7 @@ import CargaPlanillasModal from './components/CargarPlanilla';
 import PanelDescargas from './components/PanelDescargas';
 import SidebarStats from './components/SidebarStats';
 import CustomModal from './components/CustomModal';
+import NotificationCenter from './components/NotificationCenter'; // <--- Nueva Importación
 
 function App() {
   const { isLoading: isAuthLoading, isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
@@ -24,7 +25,8 @@ function App() {
     isDataLoading,
     paginacion,
     filtros,
-    opciones
+    opciones,
+    refetch // <--- Traemos la función de refresco del hook
   } = useAsignaciones(isAuthenticated, user);
 
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -67,7 +69,6 @@ function App() {
     );
   }
 
-  // --- BLOQUEO DE SEGURIDAD PARA ROLES PENDIENTES ---
   if (rol === 'profesor-pendiente') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
@@ -102,6 +103,8 @@ function App() {
             onShowDownloadPanel={() => setShowDownloadModal(true)}
             user={user}
             logout={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+            /* Pasamos el componente de notificaciones al Header para que lo renderice */
+            notificationComponent={<NotificationCenter onFinish={refetch} />} 
           />
         </div>
       </header>

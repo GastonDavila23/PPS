@@ -5,7 +5,7 @@ import { CloudDownload, FileEarmarkExcel, Funnel, LightningCharge, ExclamationCi
 interface PanelDescargasProps {
   departamentos: string[];
   turnos: string[];
-  usuarioEmail?: string; // <-- Nueva prop para seguridad
+  usuarioEmail?: string;
 }
 
 const opcionesEstadoAsignacion = [
@@ -20,36 +20,57 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
   const [filtroTurno, setFiltroTurno] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [error, setError] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const generarNombreArchivo = (depto: string, turno: string, estado: string) => {
+    const fecha = new Date().toLocaleDateString('es-AR').replace(/\//g, '-');
+    const partDepto = depto !== 'todos' ? `_zona-${depto}` : '_toda-la-provincia';
+    const partTurno = turno !== 'todos' ? `_turno-${turno}` : '';
+    const partEstado = estado !== 'todos' ? `_estado-${estado}` : '';
+    
+    return `reporte_dge${partDepto}${partTurno}${partEstado}_${fecha}.xlsx`
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '-');
+  };
 
   const handleDownload = (depto: string, turno: string, estado: string) => {
     setError('');
-    let url = 'http://127.0.0.1:5000/api/descargar-excel?';
+    setIsDownloading(true);
+    
     const params = new URLSearchParams();
-    
-    // BLINDAJE: Enviamos el email para que el backend nos autorice la descarga
     if (usuarioEmail) params.append('email', usuarioEmail);
-    
     if (depto !== 'todos') params.append('departamento', depto);
     if (turno !== 'todos') params.append('turno', turno);
-    if (estado !== 'todos') params.append('estado_asignacion', estado);
-    url += params.toString();
+    if (estado !== 'todos') params.append('estado', estado);
+
+    const url = `http://127.0.0.1:5000/api/descargar-excel?${params.toString()}`;
 
     axios.get(url, { responseType: 'blob' })
       .then(response => {
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
-        link.href = url;
-        const nombreArchivo = `reporte_${depto}_${turno}_${estado}.xlsx`.replace(/ /g, '_').toLowerCase();
-        link.setAttribute('download', nombreArchivo);
+        link.href = blobUrl;
+        
+        link.setAttribute('download', generarNombreArchivo(depto, turno, estado));
+        
         document.body.appendChild(link);
         link.click();
         link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+        setIsDownloading(false);
       })
-      .catch(() => setError('No tienes permisos o no se encontraron datos para estos filtros.'));
+      .catch((err) => {
+        console.error("Error descarga:", err);
+        setError('No se encontraron datos para los filtros seleccionados o hubo un error en el servidor.');
+        setIsDownloading(false);
+      });
   };
 
   return (
     <div className="flex flex-col gap-6">
+      {/* SECCIÓN DE ACCESOS DIRECTOS */}
       <section>
         <div className="flex items-center gap-2 mb-4">
           <LightningCharge className="text-amber-500" size={14} />
@@ -59,8 +80,9 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
           {opcionesEstadoAsignacion.map((opt) => (
             <button 
               key={opt.value} 
+              disabled={isDownloading}
               onClick={() => handleDownload('todos', 'todos', opt.value)}
-              className={`flex items-center justify-between p-4 rounded-xl border border-slate-100 transition-all hover:shadow-md hover:scale-[1.02] active:scale-95 ${opt.bg}`}
+              className={`flex items-center justify-between p-4 rounded-xl border border-slate-100 transition-all hover:shadow-md hover:scale-[1.02] active:scale-95 disabled:opacity-50 ${opt.bg}`}
             >
               <div className="flex flex-col text-left">
                 <span className={`text-[10px] font-black uppercase tracking-widest ${opt.color}`}>{opt.label}</span>
@@ -74,6 +96,7 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
 
       <div className="h-px bg-slate-200 w-full" />
 
+      {/* SECCIÓN DE PERSONALIZACIÓN */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 mb-6">
           <Funnel className="text-blue-500" size={14} />
@@ -81,6 +104,7 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Selector Zona */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Zona</label>
             <select 
@@ -93,6 +117,7 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
             </select>
           </div>
 
+          {/* Selector Turno */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Franja Horaria</label>
             <select 
@@ -105,6 +130,7 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
             </select>
           </div>
 
+          {/* Selector Estado */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
             <select 
@@ -120,14 +146,15 @@ function PanelDescargas({ departamentos, turnos, usuarioEmail }: PanelDescargasP
 
         <button 
           onClick={() => handleDownload(filtroDepto, filtroTurno, filtroEstado)}
-          disabled={filtroDepto === 'todos' && filtroTurno === 'todos' && filtroEstado === 'todos'}
-          className="w-full mt-6 bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-20 transition-all shadow-lg active:scale-[0.98]"
+          disabled={isDownloading}
+          className="w-full mt-6 bg-slate-900 text-white py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-50 transition-all shadow-lg active:scale-[0.98]"
         >
           <FileEarmarkExcel size={18} className="text-emerald-400" />
-          Generar Documento Excel
+          {isDownloading ? 'Preparando archivo...' : 'Generar Documento Excel'}
         </button>
       </section>
 
+      {/* ALERTAS DE ERROR */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-700 animate-in slide-in-from-top-2">
           <ExclamationCircle size={16} />
