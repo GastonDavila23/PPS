@@ -17,34 +17,27 @@ import CustomModal from './components/CustomModal';
 import NotificationCenter from './components/NotificationCenter'; // <--- Nueva Importación
 
 function App() {
-  const { isLoading: isAuthLoading, isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
   
-  const {
-    rol,
-    asignaciones,
-    isDataLoading,
-    paginacion,
-    filtros,
-    opciones,
-    refetch // <--- Traemos la función de refresco del hook
-  } = useAsignaciones(isAuthenticated, user);
-
+  const { isLoading: isAuthLoading, isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+  const { rol, asignaciones, isDataLoading, paginacion, filtros, opciones, refetch } = useAsignaciones(isAuthenticated, user);
+  
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
-
+  
   const handleFilterChange = (setter: (v: string) => void, value: string) => {
     setter(value);
     paginacion.setCurrentPage(1);
   };
-
+  
   const handlePageChange = (p: number) => {
     if (p >= 1 && p <= paginacion.totalPages && !isDataLoading) {
       paginacion.setCurrentPage(p);
     }
   };
 
+  // Spinner de espera para Auth0
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -53,6 +46,7 @@ function App() {
     );
   }
 
+  // Función para ingresar al sistema
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
@@ -69,6 +63,7 @@ function App() {
     );
   }
 
+  // Validación para profesores pendientes
   if (rol === 'profesor-pendiente') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
@@ -94,6 +89,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans h-screen overflow-hidden">
+      
+      // Header principal, panel con funciones para el admin
       <header className="bg-white border-b border-slate-200 z-50 shrink-0">
         <div className="max-w-full mx-auto px-6">
           <AppHeader
@@ -103,12 +100,12 @@ function App() {
             onShowDownloadPanel={() => setShowDownloadModal(true)}
             user={user}
             logout={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-            /* Pasamos el componente de notificaciones al Header para que lo renderice */
             notificationComponent={<NotificationCenter onFinish={refetch} />} 
           />
         </div>
       </header>
 
+      // Aside de datos actuales
       <div className="flex flex-1 overflow-hidden relative">
         <aside
           className={`transition-all duration-300 ease-in-out bg-white border-r border-slate-200 h-full overflow-hidden
@@ -126,6 +123,8 @@ function App() {
 
         <main className="flex-1 flex flex-col h-screen bg-[#F8FAFC] overflow-hidden">
           <div className="px-8 py-4 flex items-center justify-between shrink-0">
+
+            // Botón para abrir los filtros para las busquedas de datos 
             <button
               onClick={() => setShowSidebar(!showSidebar)}
               className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-600 shadow-sm flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
@@ -134,6 +133,7 @@ function App() {
               {showSidebar ? 'Contraer Panel' : 'Expandir Panel'}
             </button>
 
+            // Título de la web
             <div className="hidden md:block">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                 Sistema de Gestión Territorial Docente <span className="text-slate-200 mx-2">|</span> <span className="text-blue-500">Mendoza</span>
@@ -141,6 +141,7 @@ function App() {
             </div>
           </div>
 
+          // Tabla donde cargan los datos
           <div className="flex-1 px-8 overflow-hidden flex flex-col">
             <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
               {isDataLoading && asignaciones.length === 0 ? (
@@ -156,6 +157,7 @@ function App() {
               )}
             </div>
 
+            // paginación de la tabla
             {paginacion.totalPages > 1 && (
               <div className="py-6 flex justify-center items-center gap-2">
                 <button
@@ -182,7 +184,8 @@ function App() {
           </div>
         </main>
       </div>
-      
+
+      // Modal para la carga de planillas 
       <CustomModal 
         show={showUploadModal} 
         onHide={() => setShowUploadModal(false)} 
@@ -191,6 +194,7 @@ function App() {
         <CargaPlanillasModal onHide={() => setShowUploadModal(false)} usuarioEmail={user?.email} />
       </CustomModal>
 
+      // Modal para la gestion de usuarios, base de dstos y calculos
       <CustomModal 
         show={showAdminModal} 
         onHide={() => setShowAdminModal(false)} 
@@ -200,6 +204,7 @@ function App() {
         <PanelAdmin usuarioEmail={user?.email} />
       </CustomModal>
 
+      // Modal para el panel de descargas
       <CustomModal 
         show={showDownloadModal} 
         onHide={() => setShowDownloadModal(false)} 
