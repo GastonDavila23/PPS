@@ -28,7 +28,7 @@ Este sistema automatiza el proceso completo:
 * **Paginación:** Manejo eficiente de grandes volúmenes de datos.
 * **Autenticación y Roles:** Sistema seguro con Auth0 que maneja 3 niveles de usuario:
     * **Admin:** Control total (carga, descarga, asigna roles).
-    * **Profesor:** Solo puede ver y descargar reportes.
+    * **Profesor:** Solo puede ver la tabla de datos.
     * **Profesor-Pendiente:** No puede ver datos hasta que un Admin lo apruebe.
 * **Panel de Administración:** Interfaz para que los Admins promuevan o revoquen roles.
 * **Reportes Excel Profesionales:** Generación de archivos `.xlsx` con filtros aplicados, cabeceras verdes, filas intercaladas y ancho de columna automático.

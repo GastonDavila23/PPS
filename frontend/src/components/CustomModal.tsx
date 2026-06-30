@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'react-bootstrap-icons';
+import './../index.css';
 
 interface CustomModalProps {
   show: boolean;

@@ -11,15 +11,13 @@ from services.reportes_service import generar_excel_estilizado
 bp = Blueprint('asignaciones', __name__)
 logger = logging.getLogger(__name__)
 
-# --- ETAPA 1: CARGA Y NORMALIZACIÓN ---
 @bp.route('/cargar-planillas', methods=['POST'])
 def cargar():
     usuario_email = request.form.get('usuario_email')
     
     if not verificar_rol_admin(usuario_email):
         return jsonify({"error": "Acceso denegado. Se requiere rol Admin."}), 403
-    
-    # Verificamos que lleguen archivos
+
     if 'planillas' not in request.files: 
         return jsonify({"error": "No se seleccionaron archivos para subir."}), 400
     
@@ -34,21 +32,17 @@ def cargar():
         if df_new is None or df_new.empty:
             return jsonify({"error": "Los archivos no contienen datos válidos o compatibles."}), 422
 
-        # 2. Guardar en la base de datos
         conn = get_db_connection()
         try:
-            # Registrar la carga en el historial primero
             from services.storage_service import registrar_nueva_carga
             id_carga = registrar_nueva_carga(
                 usuario_email, 
                 len(df_new), 
                 f"Carga unificada de: {', '.join(nombres_archivos)}"
             )
-            
-            # Añadir el ID de carga a cada fila del DataFrame
+
             df_new['id_carga'] = id_carga
-            
-            # Guardar en escuelas_data
+
             df_new.to_sql('escuelas_data', conn, if_exists='append', index=False)
             conn.commit()
             
@@ -71,20 +65,14 @@ def cargar():
         logger.error(f"Error crítico en el proceso de carga: {str(e)}")
         return jsonify({"error": "Ocurrió un error inesperado al procesar las planillas."}), 500
 
-# --- ETAPA 2: PROCESAMIENTO ---
 @bp.route('/procesar-asignaciones', methods=['POST'])
 def procesar():
-    """
-    PASO 2: Toma todos los datos de 'escuelas_data' y corre el motor de asignación.
-    Este es el endpoint que el Admin disparará con el botón de 'Iniciar Cálculo'.
-    """
     usuario_email = request.json.get('email')
     
     if not verificar_rol_admin(usuario_email):
         return jsonify({"error": "No autorizado"}), 403
 
     try:
-        # Ejecutamos el motor
         res_calculo = recalcular_y_guardar_asignaciones()
         
         return jsonify({
@@ -96,7 +84,6 @@ def procesar():
         logger.error(f"Error en procesamiento: {str(e)}")
         return jsonify({"error": "Fallo en el motor de asignación."}), 500
 
-# --- CONSULTAS Y REPORTES ---
 @bp.route("/asignaciones", methods=['GET'])
 def get_asignaciones():
     page = request.args.get('page', 1, type=int)
@@ -131,38 +118,30 @@ def get_asignaciones():
     finally:
         conn.close()
 
-# --- HISTORIAL DE CARGAS ---
 @bp.route('/historial-cargas', methods=['GET'])
 def get_historial():
-    """Retorna el historial de todas las cargas realizadas."""
     email = request.args.get('email')
     if not email:
         return jsonify({"error": "Email requerido"}), 400
         
     conn = get_db_connection()
     try:
-        # Traemos todas las cargas ordenadas por fecha descendente
         cursor = conn.cursor()
         query = "SELECT id, fecha, usuario_email, registros_procesados, observaciones FROM historial_cargas ORDER BY fecha DESC"
         data = cursor.execute(query).fetchall()
         
         return jsonify({"historial": [dict(row) for row in data]})
     except Exception as e:
+
         logger.error(f"Error al obtener historial: {e}")
         return jsonify({"error": "No se pudo obtener el historial"}), 500
     finally:
         conn.close()
 
-# --- ELIMINAR CARGA ESPECÍFICA ---   
 @bp.route('/historial-cargas/<int:id_carga>', methods=['DELETE'])
 def eliminar_carga(id_carga):
-    """
-    Elimina una carga específica por su ID.
-    Esta es la ruta que está dando 404.
-    """
     usuario_email = request.args.get('email')
     
-    # Verificamos que sea admin
     if not verificar_rol_admin(usuario_email):
         return jsonify({"error": "No autorizado"}), 403
 
@@ -179,16 +158,13 @@ def eliminar_carga(id_carga):
     except Exception as e:
         logger.error(f"Error al eliminar carga {id_carga}: {e}")
         return jsonify({"error": "Error interno al intentar eliminar."}), 500
-
-# --- DESCARGAR EXCEL ---
+    
 @bp.route('/descargar-excel', methods=['GET'])
 def descargar():
-    """Genera el reporte Excel basado en los filtros."""
     usuario_email = request.args.get('email')
     if not verificar_rol_admin(usuario_email):
         return jsonify({"error": "No autorizado"}), 403
 
-    # Capturamos los filtros
     filtros = {
         'departamento': request.args.get('departamento'),
         'turno': request.args.get('turno'),
@@ -200,8 +176,7 @@ def descargar():
     
     where_clause, params = construir_filtros_sql(filtros)
     conn = get_db_connection()
-    try:
-        # Query para traer los datos filtrados
+    try: 
         query = f"SELECT * FROM resultados_asignacion {where_clause}"
         df = pd.read_sql_query(query, conn, params=tuple(params))
         
@@ -217,18 +192,12 @@ def descargar():
         )
     finally:
         conn.close()
-
-# --- LIMPIAR SISTEMA ---     
+    
 @bp.route('/limpiar-escuelas', methods=['POST'])
 def limpiar_datos_sistema():
-    """
-    Limpia historial, escuelas y resultados. 
-    Mantiene la tabla de usuarios intacta.
-    """
     data = request.json
     usuario_email = data.get('email')
 
-    # Validación de seguridad
     if not verificar_rol_admin(usuario_email):
         return jsonify({"error": "No autorizado. Se requieren permisos de administrador."}), 403
 

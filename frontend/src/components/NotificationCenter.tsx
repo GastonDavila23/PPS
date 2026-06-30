@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BellFill, CheckCircleFill, ExclamationCircleFill } from 'react-bootstrap-icons';
 import { io } from 'socket.io-client';
+import './../index.css';
 
 export default function NotificationCenter({ onFinish }: { onFinish?: () => void }) {
   const [notifs, setNotifs] = useState<{id: number, msg: string, tipo: string}[]>([]);

@@ -1,4 +1,5 @@
 import { X, InfoCircleFill, ExclamationTriangleFill } from 'react-bootstrap-icons';
+import './../index.css';
 
 interface GuiaFormatosOverlayProps {
   onClose: () => void;

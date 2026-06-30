@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { IAsignacion } from '../types';
 import DetalleAsignacionModal from './DetalleAsignacionModal';
+import './../index.css';
 
 interface Props {
   asignaciones: IAsignacion[];

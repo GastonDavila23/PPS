@@ -1,13 +1,7 @@
 import React from 'react';
-import {
-    MapFill,
-    GeoAltFill,
-    Building,
-    X,
-    Calendar3,
-    ArrowRight
-} from 'react-bootstrap-icons';
+import { MapFill, GeoAltFill, Building, X, Calendar3, ArrowRight } from 'react-bootstrap-icons';
 import type { IAsignacion } from '../types';
+import './../index.css';
 
 interface Props {
     show: boolean;

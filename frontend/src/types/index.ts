@@ -1,5 +1,3 @@
-// src/types/index.ts
-
 export type RolUsuario = 'admin' | 'profesor' | 'profesor-pendiente';
 
 export interface IAsignacion {
@@ -39,7 +37,6 @@ export interface AsignacionesResponse {
   allTurnos: string[];
 }
 
-// Nueva interfaz para usuarios en el front
 export interface IUser {
   id: number;
   email: string;

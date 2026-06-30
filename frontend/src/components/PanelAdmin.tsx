@@ -3,6 +3,7 @@ import { Trash, Eraser, ExclamationTriangle, PlayFill, CpuFill, PersonBadge, Clo
 import { asignacionesService } from '../services/asignacionesService';
 import type { IUser, RolUsuario } from '../types';
 import { io, Socket } from 'socket.io-client';
+import './../index.css';
 
 interface Historial {
   id: number;
@@ -185,6 +186,7 @@ function PanelAdmin({ usuarioEmail, onAsignacionFinalizada }: PanelAdminProps) {
                           >
                             <option value="profesor">Profesor</option>
                             <option value="admin">Admin</option>
+                            <option value="profesor-pendiente">Profesor Pendiente</option>
                           </select>
                         )}
                       </td>

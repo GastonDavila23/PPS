@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import Spinner from 'react-bootstrap/Spinner';
-import { 
-  LayoutSidebarInset, 
-  LayoutSidebar, 
-  HourglassSplit
-} from 'react-bootstrap-icons';
+import { LayoutSidebarInset, LayoutSidebar, HourglassSplit } from 'react-bootstrap-icons';
 import { useAsignaciones } from './hooks/useAsignaciones';
 import TablaAsignaciones from './components/TablaAsignaciones';
 import AppHeader from './components/Header';
@@ -14,7 +10,7 @@ import CargaPlanillasModal from './components/CargarPlanilla';
 import PanelDescargas from './components/PanelDescargas';
 import SidebarStats from './components/SidebarStats';
 import CustomModal from './components/CustomModal';
-import NotificationCenter from './components/NotificationCenter'; // <--- Nueva Importación
+import NotificationCenter from './components/NotificationCenter';
 
 function App() {
   const { isLoading: isAuthLoading, isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
@@ -26,7 +22,7 @@ function App() {
     paginacion,
     filtros,
     opciones,
-    refetch // <--- Traemos la función de refresco del hook
+    refetch
   } = useAsignaciones(isAuthenticated, user);
 
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -103,7 +99,6 @@ function App() {
             onShowDownloadPanel={() => setShowDownloadModal(true)}
             user={user}
             logout={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-            /* Pasamos el componente de notificaciones al Header para que lo renderice */
             notificationComponent={<NotificationCenter onFinish={refetch} />} 
           />
         </div>

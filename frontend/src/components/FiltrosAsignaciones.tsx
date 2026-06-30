@@ -2,6 +2,7 @@ import React from 'react';
 import { Spinner } from 'react-bootstrap';
 import { OPCIONES_ESTADO } from '../config/constants';
 import { Search } from 'react-bootstrap-icons';
+import './../index.css';
 
 interface Props {
   filtros: {

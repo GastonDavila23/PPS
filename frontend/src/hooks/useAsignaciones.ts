@@ -9,7 +9,7 @@ interface UseAsignacionesReturn {
   asignaciones: IAsignacion[];
   isDataLoading: boolean;
   dataError: string | null;
-  refetch: () => void; // <--- Nueva función para refrescar
+  refetch: () => void;
   paginacion: {
     currentPage: number;
     totalPages: number;
@@ -36,7 +36,6 @@ export const useAsignaciones = (isAuthenticated: boolean, user: User | undefined
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   
-  // Señal de refresco manual
   const [refreshSignal, setRefreshSignal] = useState(0);
   const refetch = useCallback(() => setRefreshSignal(s => s + 1), []);
 

@@ -1,11 +1,6 @@
 import React from 'react';
-import { 
-  InfoCircleFill, 
-  CheckCircleFill, 
-  ExclamationTriangleFill, 
-  XCircleFill,
-  X 
-} from 'react-bootstrap-icons';
+import { InfoCircleFill, CheckCircleFill, ExclamationTriangleFill, XCircleFill, X } from 'react-bootstrap-icons';
+import './../index.css';
 
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';
 

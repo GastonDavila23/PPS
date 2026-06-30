@@ -7,21 +7,17 @@ from routes.usuarios_routes import bp as usuarios_bp
 
 def create_app():
     app = Flask(__name__)
-    
-    # 1. Configuración de CORS para peticiones HTTP normales (JSON/API)
+
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Configuración de Logs
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s %(levelname)s: %(message)s'
     )
-
-    # 2. Registro de Blueprints
+    
     app.register_blueprint(asignaciones_bp, url_prefix='/api')
     app.register_blueprint(usuarios_bp, url_prefix='/api/usuarios')
 
-    # Manejo de Errores
     @app.errorhandler(404)
     def not_found(e):
         return jsonify({"error": "Ruta no encontrada"}), 404
@@ -34,8 +30,7 @@ def create_app():
     def server_error(e):
         return jsonify({"error": "Error interno del servidor"}), 500
 
-    # 3. Vincular SocketIO a la app
-    socketio.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
     
     return app
 

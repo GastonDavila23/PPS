@@ -1,14 +1,9 @@
 import { useState, useEffect } from 'react';
 import { asignacionesService } from '../services/asignacionesService';
-import { 
-  FileEarmarkSpreadsheet, 
-  CheckCircleFill, 
-  ExclamationTriangleFill,
-  InfoCircleFill,
-  CpuFill
-} from 'react-bootstrap-icons';
+import { FileEarmarkSpreadsheet, CheckCircleFill, ExclamationTriangleFill, InfoCircleFill, CpuFill } from 'react-bootstrap-icons';
 import GuiaFormatosOverlay from './GuiaFormatosOverlay';
 import { io } from 'socket.io-client';
+import './../index.css';
 
 interface CargaPlanillasModalProps {
   onHide: () => void;

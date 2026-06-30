@@ -1,9 +1,5 @@
-import {
-  ShieldLock,
-  CloudArrowUp,
-  FileEarmarkArrowDown,
-  BoxArrowRight
-} from 'react-bootstrap-icons';
+import { ShieldLock, CloudArrowUp, FileEarmarkArrowDown, BoxArrowRight } from 'react-bootstrap-icons';
+import './../index.css';
 
 const AppHeader = ({ rol, onShowAdminPanel, onShowUploadPanel, onShowDownloadPanel, user, logout }: any) => {
   return (

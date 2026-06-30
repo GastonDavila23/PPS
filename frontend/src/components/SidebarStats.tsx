@@ -1,6 +1,7 @@
 import React from 'react';
 import { Funnel, DatabaseCheck } from 'react-bootstrap-icons';
 import FiltrosAsignaciones from './FiltrosAsignaciones';
+import './../index.css';
 
 interface SidebarStatsProps {
   totalItems: number;
